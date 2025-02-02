@@ -1,0 +1,23 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "app": {
+    "windows": [
+      {
+        "title": "NextApp",
+        "width": 1200,
+        "height": 800
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' data:; connect-src http://localhost:3000 ws://localhost:3000"
+    },
+    "withGlobalTauri": true
+  },
+  "identifier": "com.yourcompany.nextapp",
+  "build": {
+    "beforeDevCommand": "next dev",
+    "beforeBuildCommand": "next build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
+  }
+}
