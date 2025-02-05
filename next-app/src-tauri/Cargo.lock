@@ -113,6 +113,7 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "log",
+ "once_cell",
  "rusqlite",
  "serde",
  "serde_json",
