@@ -1,25 +1,33 @@
 "use client";
 
-import { Onboarding } from '@/components/Onboarding';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import HomePage from '@/components/HomePage';
 
 // export const dynamic = 'force-dynamic';
 
 export default function Home() {
-    const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  
-    useEffect(() => {
-      const onboardingComplete = document.cookie.includes('onboarding_complete=true');
-      setHasCompletedOnboarding(onboardingComplete);
-    }, []);
-  
-    if (!hasCompletedOnboarding) {
-      return <Onboarding />;
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    console.log('[HomePage] Checking onboarding status');
+    const onboarded = document.cookie.includes('onboarded=');
+    if (!onboarded) {
+      console.log('[HomePage] Redirecting to onboarding');
+      router.push('/onboarding');
+    } else {
+      setIsLoading(false);
     }
-  
+  }, [router]);
+
+  if (isLoading) {
     return (
-      <main>
-        <h1>Welcome to the Investment Tracker</h1>
-      </main>
+      <div className="container mx-auto p-4">
+        <h1>Loading...</h1>
+      </div>
     );
   }
+
+  return <HomePage />;
+}

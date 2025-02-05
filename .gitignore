@@ -1,0 +1,4 @@
+node_modules
+next-app/node_modules
+next-app/.next
+next-app/src-tauri/target

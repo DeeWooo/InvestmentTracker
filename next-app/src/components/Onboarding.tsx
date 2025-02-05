@@ -28,7 +28,7 @@ export function Onboarding() {
   const currentStep = steps[step];
 
   const handleComplete = () => {
-    document.cookie = 'onboarding_complete=true; path=/';
+    document.cookie = 'onboarded=true; path=/';
     router.push('/');
   };
 

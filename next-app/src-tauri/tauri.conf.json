@@ -1,23 +1,38 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeDevCommand": "npm run next:dev",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:3001"
+
+  },
+  "identifier": "com.yourcompany.nextapp",
+  "productName": "NextApp",
+  "version": "0.1.0",
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
   "app": {
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' data: tauri: asset: https://asset.localhost; connect-src http://localhost:3001 ws://localhost:3001 tauri: https://tauri.localhost"
+    },
     "windows": [
       {
         "title": "NextApp",
         "width": 1200,
-        "height": 800
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
       }
-    ],
-    "security": {
-      "csp": "default-src 'self' 'unsafe-inline' data:; connect-src http://localhost:3000 ws://localhost:3000"
-    },
-    "withGlobalTauri": true
-  },
-  "identifier": "com.yourcompany.nextapp",
-  "build": {
-    "beforeDevCommand": "next dev",
-    "beforeBuildCommand": "next build",
-    "devUrl": "http://localhost:3000",
-    "frontendDist": "../out"
+    ]
   }
 }
