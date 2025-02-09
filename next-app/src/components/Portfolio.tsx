@@ -1,90 +1,115 @@
 import { BuyPositionForm } from './BuyPositionForm';
-import { Position } from '@/lib/types';
-import { db } from '@/lib/db';
-// import { useState } from 'react';
+import { usePortfolio } from '@/hooks/usePortfolio';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
-interface PortfolioData {
-  totalValue: number;
-  totalCost: number;
-  totalPnl: number;
-  totalPnlPercentage: number;
-}
+export default function Portfolio() {
+  const { data: portfolios, isLoading, error } = usePortfolio();
 
-export default function Portfolio({ data }: { data: PortfolioData }) {
-  const handleBuyPosition = async (position: {
-    code: string;
-    name: string;
-    quantity: number;
-    buyPrice: number;
-    portfolio: string;
-  }) => {
-    try {
-      const response = await fetch('/api/positions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(position),
-      });
+  if (isLoading) {
+    return <div>加载中...</div>;
+  }
 
-      if (!response.ok) {
-        throw new Error('Failed to save position');
-      }
+  if (error) {
+    return <div>加载失败，请重试</div>;
+  }
 
-      const savedPosition = await response.json();
-      console.log('Saved position:', savedPosition);
-      
-      // 可以添加一个提示信息
-      alert('持仓添加成功！');
-      
-    } catch (error) {
-      console.error('Error buying position:', error);
-      alert('保存失败，请重试');
-    }
-  };
-
-  const handleAddPosition = async (position: Position) => {
-    try {
-      await db.savePosition(position);
-      alert('持仓添加成功！');
-      // TODO: 刷新持仓列表
-    } catch (error) {
-      console.error('Failed to save position:', error);
-      alert('保存失败，请重试');
-    }
-  };
+  if (!portfolios || portfolios.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-gray-500">暂无投资组合</p>
+        <div className="mt-4">
+          <BuyPositionForm onBuy={async () => {}} />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mb-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
-        <div>
-          {/* <h1 className="text-2xl font-bold">投资组合</h1> */}
-          <p className="text-gray-500">投资组合分析</p>
-        </div>
-        <BuyPositionForm onBuy={handleAddPosition} />
+        {/* <h1 className="text-2xl font-bold">投资组合</h1> */}
+        <BuyPositionForm onBuy={async () => {}} />
       </div>
-      
-      <div className="mt-4 grid grid-cols-2 gap-4">
-        <div className="p-4 border rounded-lg">
-          <h3 className="text-sm text-gray-500">总市值</h3>
-          <p className="text-xl font-bold">¥{data.totalValue.toLocaleString()}</p>
-        </div>
-        <div className="p-4 border rounded-lg">
-          <h3 className="text-sm text-gray-500">总成本</h3>
-          <p className="text-xl font-bold">¥{data.totalCost.toLocaleString()}</p>
-        </div>
-        <div className="p-4 border rounded-lg">
-          <h3 className="text-sm text-gray-500">总盈亏</h3>
-          <p className={`text-xl font-bold ${data.totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            ¥{data.totalPnl.toLocaleString()}
-          </p>
-        </div>
-        <div className="p-4 border rounded-lg">
-          <h3 className="text-sm text-gray-500">收益率</h3>
-          <p className={`text-xl font-bold ${data.totalPnlPercentage >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {data.totalPnlPercentage}%
-          </p>
-        </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {portfolios.map((portfolio) => (
+          <Card key={portfolio.portfolio} className="w-full">
+            <CardHeader className="border-b">
+              <CardTitle className="text-lg">投资组合：{portfolio.portfolio}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+
+              <div>
+                <hr/>
+                {/* <div style={{ fontSize: "20px" }}>投资组合：白马成长策略</div> */}
+        
+                <div className="layui-row">
+                  <div className="layui-col-xs6">
+                    <div>总持仓成本: 73470.000000</div>
+                    <div>单标满仓金额: 50000</div>
+                  </div>
+                  <div className="layui-col-xs6">
+                    <div style={{ color: "green", fontWeight: "bold" }}>总盈亏：-33879.0000</div>
+                    <div style={{ color: "green", fontWeight: "bold" }}>总盈亏比: -0.461127</div>
+                  </div>
+                </div>
+                <div>
+                  <hr style={{ border: "1px dashed #987cb9", width: "80%", color: "#987cb9" }} />
+                  <div className="layui-row">
+                    <div className="layui-col-xs2">
+                      <div>sz000408</div>
+                      <div>藏格矿业(000408)</div>
+                      <hr style={{ margin: "auto", color: "#987cb9", border: "1px solid" }} />
+                      <div>当前价格</div>
+                      <div style={{ fontSize: "20px" }}>32.2400</div>
+                    </div>
+                    <div className="layui-col-xs2">
+                      <div>当前仓位: 0.128960</div>
+                      <div>成本仓位: 0.133200</div>
+                      <hr style={{ margin: "auto", color: "#987cb9", border: "1px solid" }} />
+        
+                      <div style={{ color: "green" }}>盈亏: -212.0000</div>
+                      <div style={{ color: "green" }}>盈亏比： -0.031832</div>
+        
+                      <hr style={{ margin: "auto", color: "#987cb9", border: "1px solid" }} />
+                      <div>建议买入区间(-10%)&lt;28.485</div>
+                      <div>建议卖出区间(10%)&gt;34.815</div>
+                    </div>
+                    <div>
+                      <table className="reversal">
+                        <tbody>
+                          <tr>
+                            <th>买入日期</th>
+                            <th>买入价格</th>
+                            <th>数量</th>
+                            <th>盈亏</th>
+                          <th>盈亏比</th>
+                        </tr>
+        
+                        <tr>
+                          <td>2022-08-19</td>
+                          <td>31.65</td>
+                          <td>100</td>
+                          <td style={{ color: "red" }}>59.0000</td>
+                          <td style={{ color: "red" }}>0.018641</td>
+                        </tr>
+        
+                        <tr>
+                          <td>2022-07-27</td>
+                          <td>34.95</td>
+                          <td>100</td>
+                          <td style={{ color: "green" }}>-271.0000</td>
+                          <td style={{ color: "green" }}>-0.077539</td>
+                        </tr>
+                      </tbody></table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          
+          </Card>
+        ))}
       </div>
     </div>
   );

@@ -9,11 +9,44 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('positions');
 
   const portfolio = {
-    totalValue: 1234567,
-    totalCost: 1000000,
-    totalPnl: 234567,
-    totalPnlPercentage: 23.46,
+    name: "白马成长策略",
+    totalCost: 73470.0,
+    maxSinglePosition: 50000,
+    totalPnl: -33879.0,
+    totalPnlPercentage: -0.461127,
+    totalValue: 73470.0 - 33879.0,
+    positions: [
+      {
+        code: "sz000408",
+        name: "藏格矿业(000408)",
+        currentPrice: 32.24,
+        currentPosition: 0.12896,
+        costPosition: 0.1332,
+        pnl: -212.0,
+        pnlPercentage: -0.031832,
+        buyRange: 28.485,
+        sellRange: 34.815,
+        transactions: [
+          {
+            date: "2022-08-19",
+            price: 31.65,
+            quantity: 100,
+            pnl: 59.0,
+            pnlPercentage: 0.018641
+          },
+          {
+            date: "2022-07-27",
+            price: 34.95,
+            quantity: 100,
+            pnl: -271.0,
+            pnlPercentage: -0.077539
+          }
+        ]
+      },
+      // ... 其他标的 ...
+    ]
   };
+
 
   return (
     <div className="flex h-screen">
@@ -46,7 +79,7 @@ export default function HomePage() {
         {activeTab === 'positions' ? (
           <PositionList />
         ) : (
-          <Portfolio data={portfolio} />
+          <Portfolio />
         )}
       </div>
     </div>

@@ -5,7 +5,6 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../out",
     "devUrl": "http://localhost:3001"
-
   },
   "identifier": "com.yourcompany.nextapp",
   "productName": "NextApp",

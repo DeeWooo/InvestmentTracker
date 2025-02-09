@@ -21,7 +21,7 @@ fn get_db() -> SqliteResult<Arc<Mutex<Option<Connection>>>> {
 fn init_db() -> SqliteResult<Connection> {
     let conn = Connection::open("positions.db")?;
     
-    // 只在表不存在时创建表
+    // 只保留 positions 表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS positions (
             code TEXT PRIMARY KEY,
@@ -126,12 +126,50 @@ async fn reset_database() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn get_portfolio_summary() -> Result<Vec<PortfolioSummary>, String> {
+    let conn = get_db().map_err(|e| e.to_string())?;
+    let conn_guard = conn.lock().unwrap();
+    let conn = conn_guard.as_ref().unwrap();
+    
+    // 获取组合汇总数据
+    let mut stmt = conn
+        .prepare("SELECT portfolio, SUM(quantity * buy_price) as total_cost, SUM(quantity * current_price) as total_value FROM positions GROUP BY portfolio")
+        .map_err(|e| e.to_string())?;
+    
+    let summaries = stmt
+        .query_map([], |row| {
+            Ok(PortfolioSummary {
+                portfolio: row.get(0)?,
+                total_cost: row.get(1)?,
+                total_value: row.get(2)?,
+                pnl: row.get::<_, f64>(2)? - row.get::<_, f64>(1)?,
+                pnl_percentage: (row.get::<_, f64>(2)? - row.get::<_, f64>(1)?) / row.get::<_, f64>(1)? * 100.0,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<SqliteResult<Vec<PortfolioSummary>>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(summaries)
+}
+
+#[derive(serde::Serialize)]
+struct PortfolioSummary {
+    portfolio: String,
+    total_cost: f64,
+    total_value: f64,
+    pnl: f64,
+    pnl_percentage: f64,
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_positions,
             save_position,
-            reset_database
+            reset_database,
+            get_portfolio_summary
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

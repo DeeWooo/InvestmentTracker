@@ -12,3 +12,11 @@ export interface Position {
   profit10: number;
   profit20: number;
 }
+
+export interface PortfolioData {
+  totalValue: number;
+  totalCost: number;
+  totalPnl: number;
+  totalPnlPercentage: number;
+  positions: Position[];
+}
