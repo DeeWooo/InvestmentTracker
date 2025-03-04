@@ -116,21 +116,19 @@ export default function PositionList() {
       position?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ) ?? [];
 
-  // 在 Table 组件之前添加错误重试按钮
-  {positionsError && (
-    <div className="mb-4">
-      <Button 
-        variant="outline" 
-        onClick={refreshPositions}
-        className="w-full"
-      >
-        重新加载数据
-      </Button>
-    </div>
-  )}
-
   return (
     <>
+      {positionsError && (
+        <div className="mb-4">
+          <Button 
+            variant="outline" 
+            onClick={refreshPositions}
+            className="w-full"
+          >
+            重新加载数据
+          </Button>
+        </div>
+      )}
       <div className="mb-6">
         {/* <h1 className="text-2xl font-bold">持仓列表</h1> */}
         <p className="text-gray-500">实时更新你的持仓盈亏情况</p>
@@ -147,7 +145,6 @@ export default function PositionList() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
-
       <Table>
         <TableHeader>
           <TableRow>

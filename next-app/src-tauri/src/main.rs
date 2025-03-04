@@ -137,19 +137,60 @@ async fn get_portfolio_summary() -> Result<Vec<PortfolioSummary>, String> {
         .prepare("SELECT portfolio, SUM(quantity * buy_price) as total_cost, SUM(quantity * current_price) as total_value FROM positions GROUP BY portfolio")
         .map_err(|e| e.to_string())?;
     
-    let summaries = stmt
+    let mut summaries = Vec::new();
+    
+    let portfolio_rows = stmt
         .query_map([], |row| {
-            Ok(PortfolioSummary {
-                portfolio: row.get(0)?,
-                total_cost: row.get(1)?,
-                total_value: row.get(2)?,
-                pnl: row.get::<_, f64>(2)? - row.get::<_, f64>(1)?,
-                pnl_percentage: (row.get::<_, f64>(2)? - row.get::<_, f64>(1)?) / row.get::<_, f64>(1)? * 100.0,
-            })
+            Ok((
+                row.get::<_, String>(0)?, // portfolio
+                row.get::<_, f64>(1)?,    // total_cost
+                row.get::<_, f64>(2)?,    // total_value
+            ))
         })
-        .map_err(|e| e.to_string())?
-        .collect::<SqliteResult<Vec<PortfolioSummary>>>()
         .map_err(|e| e.to_string())?;
+    
+    for portfolio_result in portfolio_rows {
+        let (portfolio_name, total_cost, total_value) = portfolio_result.map_err(|e| e.to_string())?;
+        
+        // 计算盈亏和盈亏比例
+        let pnl = total_value - total_cost;
+        let pnl_percentage = if total_cost > 0.0 { pnl / total_cost } else { 0.0 };
+        
+        // 获取该投资组合的所有持仓
+        let mut pos_stmt = conn
+            .prepare("SELECT * FROM positions WHERE portfolio = ?")
+            .map_err(|e| e.to_string())?;
+        
+        let positions = pos_stmt
+            .query_map([&portfolio_name], |row| {
+                Ok(Position {
+                    code: row.get(0)?,
+                    name: row.get(1)?,
+                    quantity: row.get(2)?,
+                    buy_price: row.get(3)?,
+                    buy_date: row.get(4)?,
+                    portfolio: row.get(5)?,
+                    symbol: row.get(6)?,
+                    current_price: row.get(7)?,
+                    pnl: row.get(8)?,
+                    pnl_percentage: row.get(9)?,
+                    profit10: row.get(10)?,
+                    profit20: row.get(11)?,
+                })
+            })
+            .map_err(|e| e.to_string())?
+            .collect::<SqliteResult<Vec<Position>>>()
+            .map_err(|e| e.to_string())?;
+        
+        summaries.push(PortfolioSummary {
+            portfolio: portfolio_name,
+            total_cost,
+            total_value,
+            pnl,
+            pnl_percentage,
+            positions,
+        });
+    }
 
     Ok(summaries)
 }
@@ -161,6 +202,7 @@ struct PortfolioSummary {
     total_value: f64,
     pnl: f64,
     pnl_percentage: f64,
+    positions: Vec<Position>,
 }
 
 fn main() {
