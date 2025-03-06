@@ -1,0 +1,233 @@
+/* 投资组合页面整体样式 */
+.portfolio-container {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: #333;
+  padding: 1rem;
+  width: 100%;
+}
+
+/* 筛选区域样式 */
+.filter-area {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 表格布局 */
+.portfolio-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+
+.portfolio-table th,
+.portfolio-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+  text-align: left;
+}
+
+/* 表格标题 */
+.portfolio-section {
+  background-color: #f8f9fa;
+  border-top: 2px solid #007bff;
+}
+
+.portfolio-section th {
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 1rem 0.75rem;
+}
+
+/* 投资组合总览行 */
+.portfolio-summary-row {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.portfolio-summary-row td {
+  padding: 0.75rem;
+}
+
+/* 产品详情行 */
+.product-row td {
+  vertical-align: top;
+}
+
+.product-code {
+  font-weight: bold;
+}
+
+.product-name {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* 子表格样式 */
+.transaction-table-wrapper {
+  width: 100%;
+  overflow: visible;
+  margin-bottom: 1rem;
+  padding: 0 10px;
+}
+
+.transaction-table {
+  display: grid;
+  grid-template-columns: auto repeat(auto-fill, minmax(100px, 1fr));
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #ffffff;
+  overflow: hidden;
+  margin-top: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.attr-title {
+  grid-column: 1;
+  padding: 8px 10px;
+  font-weight: 500;
+  background-color: #f5f5f5;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  min-width: 100px;
+}
+
+.date-title {
+  padding: 8px 10px;
+  font-weight: 500;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.row-group {
+  display: contents;
+}
+
+.data-cell {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.number-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.profit {
+  color: #f5222d;
+}
+
+.loss {
+  color: #52c41a;
+}
+
+/* 无交易记录提示样式 */
+.no-transactions-message {
+  grid-column: 1 / -1;
+  padding: 15px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* 刷新按钮 */
+.refresh-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.refresh-button:hover {
+  background-color: #2563eb;
+  transform: scale(1.05);
+}
+
+.refresh-button.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 产品相关样式 */
+.product-row {
+  background-color: #f9f9f9;
+}
+
+.product-group-even {
+  background-color: #f5f5f5;
+}
+
+.product-group-odd {
+  background-color: #ffffff;
+}
+
+.product-code {
+  font-weight: 500;
+}
+
+.product-name {
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* 投资组合相关样式 */
+.portfolio-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+  border: 1px solid #e0e0e0;
+}
+
+.portfolio-section th {
+  background-color: #1e40af;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+.portfolio-summary-row {
+  background-color: #edf2f7;
+}
+
+.text-cell {
+  padding: 8px 10px;
+}
+
+.suggestion-range {
+  font-size: 0.9em;
+  color: #718096;
+}
+
+/* 筛选区域 */
+.filter-area {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}

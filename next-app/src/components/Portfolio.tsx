@@ -1,135 +1,144 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { BuyPositionForm } from "./BuyPositionForm";
-import { usePortfolio } from "@/hooks/usePortfolio";
-import { ExtendedPosition, Position } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import "@/styles/portfolio-styles.css";
+import { Button } from "./ui/button";
+import { Position, Portfolio as PortfolioType } from "@/lib/types";
+import "@/styles/portfolio-reference.css";
+import React from "react";
+import { usePositions } from "@/hooks/usePositions";
+import {
+  buildPortfoliosFromPositions,
+  ensureTransactions,
+} from "@/lib/portfolioUtils";
 
 export default function Portfolio() {
-  const { data: portfolios, isLoading, error } = usePortfolio();
+  const [portfolios, setPortfolios] = useState<PortfolioType[]>([]);
   const [showBuyForm, setShowBuyForm] = useState(false);
   const [searchCode, setSearchCode] = useState("");
   const [searchName, setSearchName] = useState("");
   const [selectedPortfolio, setSelectedPortfolio] = useState<string | null>(
     null
   );
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 获取可用的投资组合列表
-  const availablePortfolios = portfolios
-    ? Array.from(new Set(portfolios.map((p) => p.portfolio)))
-    : [];
+  const {
+    positions,
+    isLoading: positionsLoading,
+    error: positionsError,
+    refreshPositions,
+    buyPosition,
+  } = usePositions();
+
+  const availablePortfolios =
+    portfolios.length > 0
+      ? [...new Set(portfolios.map((p) => p.portfolio))]
+      : [
+          "RMBETF",
+          "北上资金",
+          "主观持仓",
+          "非RMB",
+          "豆瓜",
+          "peg策略",
+          "白马成长策略",
+        ];
 
   useEffect(() => {
-    // 如果有可用的投资组合，但没有选择任何一个，则默认选择第一个
-    if (availablePortfolios.length > 0 && !selectedPortfolio) {
-      setSelectedPortfolio(availablePortfolios[0]);
+    if (positions && Array.isArray(positions) && positions.length > 0) {
+      const positionsWithTransactions = ensureTransactions(positions);
+      const newPortfolios = buildPortfoliosFromPositions(
+        positionsWithTransactions
+      );
+      setPortfolios(newPortfolios);
     }
-  }, [availablePortfolios, selectedPortfolio]);
+  }, [positions]);
 
-  // 修改为接收 Position 类型
+  const handleRefreshQuote = async () => {
+    try {
+      setIsRefreshing(true);
+      await refreshPositions();
+    } catch (error) {
+      console.error("刷新行情失败:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const filteredPortfolios = portfolios.filter((portfolio) => {
+    if (selectedPortfolio && portfolio.portfolio !== selectedPortfolio) {
+      return false;
+    }
+    return true;
+  });
+
   const handleSavePosition = async (position: Position) => {
     try {
-      // 直接转发到 API
-      const response = await fetch("/api/save-record", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code: position.code,
-          name: position.name,
-          portfolio: position.portfolio,
-          buyInPrice: position.buy_price,
-          number: position.quantity,
-        }),
-      });
-      const result = await response.json();
-      alert(result);
+      await buyPosition(position);
+      setShowBuyForm(false);
+      await refreshPositions();
     } catch (error) {
-      console.error("保存失败", error);
-      alert("保存失败！");
+      console.error("保存持仓失败:", error);
     }
   };
 
-  // 筛选持仓
-  const filterPositions = (positions: ExtendedPosition[] = []) => {
-    return positions.filter(
-      (pos) =>
-        (searchCode === "" ||
-          pos.code.toLowerCase().includes(searchCode.toLowerCase())) &&
-        (searchName === "" ||
-          pos.name.toLowerCase().includes(searchName.toLowerCase()))
+  // 添加一个函数用于打印调试信息
+  const logTransactions = (position: Position) => {
+    console.log(
+      `Position ${position.code} transactions:`,
+      position.transactions
     );
+    return position.transactions && position.transactions.length > 0;
   };
 
-  // 找到当前选择的投资组合
-  const currentPortfolio = portfolios?.find(
-    (p) => p.portfolio === selectedPortfolio
-  );
-
-  // 筛选该投资组合中的持仓
-  const filteredPositions = currentPortfolio
-    ? filterPositions(currentPortfolio.positions)
-    : [];
-
-  if (isLoading) return <div>加载中...</div>;
-  if (error) return <div>加载失败，请重试: {error.message}</div>;
+  if (positionsLoading) return <div className="loading-spinner">加载中...</div>;
+  if (positionsError)
+    return (
+      <div className="error-message">
+        加载失败，请重试: {positionsError.message}
+      </div>
+    );
   if (!portfolios || portfolios.length === 0) {
     return (
-      <div className="p-4 text-center">
-        <p>暂无投资组合</p>
-        <div className="mt-4">
-          <div>
-            <Button
-              variant="primary"
-              onClick={() => setShowBuyForm(!showBuyForm)}
-            >
-              开仓/买入
-            </Button>
-          </div>
-
-          {showBuyForm && (
-            <div className="mt-4">
-              <BuyPositionForm onBuy={handleSavePosition} />
-            </div>
-          )}
-        </div>
+      <div className="flex flex-col items-center justify-center h-64">
+        <p className="text-gray-500 mb-4">暂无投资组合数据</p>
+        <Button onClick={() => setShowBuyForm(true)}>添加持仓</Button>
+        {showBuyForm && <BuyPositionForm onBuy={handleSavePosition} />}
       </div>
     );
   }
 
   return (
     <div className="portfolio-container">
-      {/* 筛选区域 */}
-      <div className="filter-area mb-4">
-        <div className="flex flex-wrap gap-4">
-          <div className="search-input">
-            <label className="mr-2">证券代码：</label>
+      <div className="filter-area">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="filter-item">
+            <label className="block text-sm mb-1">证券代码：</label>
             <input
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
-              className="px-2 py-1 border rounded"
+              className="w-full px-3 py-2 border rounded"
+              placeholder="输入证券代码"
             />
           </div>
 
-          <div className="search-input">
-            <label className="mr-2">证券名称：</label>
+          <div className="filter-item">
+            <label className="block text-sm mb-1">证券名称：</label>
             <input
               type="text"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
-              className="px-2 py-1 border rounded"
+              className="w-full px-3 py-2 border rounded"
+              placeholder="输入证券名称"
             />
           </div>
 
-          <div className="portfolio-selector">
-            <label className="mr-2">投资组合：</label>
+          <div className="filter-item">
+            <label className="block text-sm mb-1">投资组合：</label>
             <select
               value={selectedPortfolio || ""}
-              onChange={(e) => setSelectedPortfolio(e.target.value)}
-              className="px-2 py-1 border rounded"
+              onChange={(e) => setSelectedPortfolio(e.target.value || null)}
+              className="w-full px-3 py-2 border rounded"
             >
+              <option value="">全部</option>
               {availablePortfolios.map((portfolio) => (
                 <option key={portfolio} value={portfolio}>
                   {portfolio}
@@ -139,7 +148,7 @@ export default function Portfolio() {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex space-x-2">
           <Button
             variant="primary"
             onClick={() => setShowBuyForm(!showBuyForm)}
@@ -147,177 +156,241 @@ export default function Portfolio() {
             开仓/买入
           </Button>
 
-          {showBuyForm && (
-            <div className="mt-4">
-              <BuyPositionForm onBuy={handleSavePosition} />
-            </div>
+          {process.env.NODE_ENV !== "production" && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                console.log("当前持仓数据:", positions);
+                console.log("当前投资组合数据:", portfolios);
+              }}
+            >
+              调试数据
+            </Button>
           )}
         </div>
       </div>
 
-      {/* 投资组合信息 */}
-      {currentPortfolio && (
-        <div className="portfolio-summary mb-6 p-4 border rounded">
-          <h2 className="text-xl font-bold mb-2">
-            投资组合：{currentPortfolio.portfolio}
-          </h2>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p>总持仓成本: {(currentPortfolio.totalCost ?? 0).toFixed(6)}</p>
-              <p>单标满仓金额: {currentPortfolio.maxPositionAmount || 50000}</p>
-            </div>
-
-            <div>
-              <p
+      {filteredPortfolios.map((portfolio) => (
+        <table key={portfolio.portfolio} className="portfolio-table">
+          <thead>
+            <tr className="portfolio-section">
+              <th colSpan={8}>投资组合：{portfolio.portfolio}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="portfolio-summary-row">
+              <td className="text-cell">
+                总持仓成本: {portfolio.totalCost.toFixed(2)}
+              </td>
+              <td className="text-cell">
+                单标满仓金额: {portfolio.maxPositionAmount}
+              </td>
+              <td
                 className={
-                  (currentPortfolio.pnl ?? 0) < 0
-                    ? "text-green-600"
-                    : "text-red-600"
+                  portfolio.pnl >= 0 ? "profit number-cell" : "loss number-cell"
                 }
               >
-                总盈亏：{(currentPortfolio.pnl ?? 0).toFixed(4)}
-              </p>
-              <p
+                总盈亏: {portfolio.pnl.toFixed(2)}
+              </td>
+              <td
                 className={
-                  (currentPortfolio.pnlPercentage ?? 0) < 0
-                    ? "text-green-600"
-                    : "text-red-600"
+                  portfolio.pnlPercentage >= 0
+                    ? "profit number-cell"
+                    : "loss number-cell"
                 }
               >
-                总盈亏比: {(currentPortfolio.pnlPercentage ?? 0).toFixed(6)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+                总盈亏比: {(portfolio.pnlPercentage * 100).toFixed(2)}%
+              </td>
+              <td colSpan={4}></td>
+            </tr>
 
-      {/* 持仓列表 */}
-      <div className="positions-container">
-        {filteredPositions.map((position) => {
-          // 计算建议买入卖出区间
-          const buyRange = position.buy_price * 0.9;
-          const sellRange = position.buy_price * 1.1;
+            {portfolio.positions
+              .filter((position) => {
+                if (
+                  searchCode &&
+                  !position.code
+                    .toLowerCase()
+                    .includes(searchCode.toLowerCase())
+                ) {
+                  return false;
+                }
+                if (
+                  searchName &&
+                  !position.name
+                    .toLowerCase()
+                    .includes(searchName.toLowerCase())
+                ) {
+                  return false;
+                }
+                return true;
+              })
+              .map((position, index) => {
+                // 添加调试日志
+                console.log(
+                  `渲染持仓 ${position.code}, 有交易记录: ${
+                    position.transactions?.length || 0
+                  }条`
+                );
 
-          return (
-            <div
-              key={position.code}
-              className="position-card mb-6 border rounded overflow-hidden"
-            >
-              <div className="bg-gray-100 p-2 border-b">
-                <h3 className="font-bold">{position.code}</h3>
-                <p>{position.name}</p>
-              </div>
+                return (
+                  <React.Fragment key={position.code}>
+                    <tr
+                      className={`product-row ${
+                        index % 2 === 0
+                          ? "product-group-even"
+                          : "product-group-odd"
+                      }`}
+                    >
+                      <td>
+                        <div className="product-code">{position.code}</div>
+                        <div className="product-name">{position.name}</div>
+                      </td>
+                      <td className="number-cell">
+                        当前仓位: {position.current_position?.toFixed(6)}
+                      </td>
+                      <td className="number-cell">
+                        成本仓位: {position.cost_position?.toFixed(6)}
+                      </td>
+                      <td className="number-cell">
+                        当前价格: {position.current_price.toFixed(4)}
+                      </td>
+                      <td
+                        className={
+                          position.pnl >= 0
+                            ? "profit number-cell"
+                            : "loss number-cell"
+                        }
+                      >
+                        盈亏: {position.pnl.toFixed(2)}
+                      </td>
+                      <td
+                        className={
+                          position.pnl_percentage >= 0
+                            ? "profit number-cell"
+                            : "loss number-cell"
+                        }
+                      >
+                        盈亏比: {(position.pnl_percentage * 100).toFixed(2)}%
+                      </td>
+                      <td className="text-cell suggestion-range">
+                        建议买入区间(-10%): &lt;
+                        {(position.buy_price * 0.9).toFixed(3)}
+                      </td>
+                      <td className="text-cell suggestion-range">
+                        建议卖出区间(10%): &gt;
+                        {(position.buy_price * 1.1).toFixed(3)}
+                      </td>
+                    </tr>
 
-              <div className="flex flex-wrap">
-                {/* 左侧：当前价格信息 */}
-                <div className="w-1/6 p-4 border-r">
-                  <p className="text-center text-gray-600">当前价格</p>
-                  <p className="text-center text-xl font-bold">
-                    {position.current_price.toFixed(4)}
-                  </p>
-                </div>
+                    <tr
+                      className={
+                        index % 2 === 0
+                          ? "product-group-even"
+                          : "product-group-odd"
+                      }
+                    >
+                      <td colSpan={8} className="pt-0 pb-3">
+                        <div className="transaction-table-wrapper">
+                          {position.transactions &&
+                          position.transactions.length > 0 ? (
+                            <div className="transaction-table">
+                              {/* 允许任意数量的交易记录自动换行 */}
 
-                {/* 中间：仓位和盈亏信息 */}
-                <div className="w-1/2 p-4 border-r">
-                  <p>
-                    当前仓位:{" "}
-                    {position.current_position?.toFixed(6) || "计算中..."}
-                  </p>
-                  <p>
-                    成本仓位:{" "}
-                    {position.cost_position?.toFixed(6) || "计算中..."}
-                  </p>
+                              {/* 行标题 */}
+                              <div className="row-title">属性 \\ 日期</div>
 
-                  <hr className="my-2" />
+                              {/* 日期头部行 */}
+                              {position.transactions.map((transaction, idx) => (
+                                <div key={`date-${idx}`} className="date-title">
+                                  {transaction.date}
+                                </div>
+                              ))}
 
-                  <p
-                    className={
-                      position.pnl < 0 ? "text-green-600" : "text-red-600"
-                    }
-                  >
-                    盈亏: {position.pnl.toFixed(4)}
-                  </p>
-                  <p
-                    className={
-                      position.pnl_percentage < 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }
-                  >
-                    盈亏比： {position.pnl_percentage.toFixed(6)}
-                  </p>
+                              {/* 买入价格行 */}
+                              <div className="attr-title">买入价格</div>
+                              {position.transactions.map((transaction, idx) => (
+                                <div
+                                  key={`price-${idx}`}
+                                  className="data-cell number-cell"
+                                >
+                                  {transaction.price.toFixed(3)}
+                                </div>
+                              ))}
 
-                  <hr className="my-2" />
+                              {/* 数量行 */}
+                              <div className="attr-title">数量</div>
+                              {position.transactions.map((transaction, idx) => (
+                                <div
+                                  key={`quantity-${idx}`}
+                                  className="data-cell number-cell"
+                                >
+                                  {transaction.quantity}
+                                </div>
+                              ))}
 
-                  <p>建议买入区间(-10%)&lt;{buyRange.toFixed(3)}</p>
-                  <p>建议卖出区间(10%)&gt;{sellRange.toFixed(3)}</p>
-                </div>
+                              {/* 盈亏行 */}
+                              <div className="attr-title">盈亏</div>
+                              {position.transactions.map((transaction, idx) => (
+                                <div
+                                  key={`pnl-${idx}`}
+                                  className={`data-cell ${
+                                    transaction.pnl >= 0 ? "profit" : "loss"
+                                  } number-cell`}
+                                >
+                                  {transaction.pnl.toFixed(2)}
+                                </div>
+                              ))}
 
-                {/* 右侧：交易记录 - 这里将使用模拟数据 */}
-                <div className="w-1/3 p-4">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="p-1 border">买入日期</th>
-                        <th className="p-1 border">买入价格</th>
-                        <th className="p-1 border">数量</th>
-                        <th className="p-1 border">盈亏</th>
-                        <th className="p-1 border">盈亏比</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* 这里我们只有一条记录，实际情况中应该获取所有交易记录 */}
-                      <tr>
-                        <td className="p-1 border">{position.buy_date}</td>
-                        <td className="p-1 border">
-                          {position.buy_price.toFixed(2)}
-                        </td>
-                        <td className="p-1 border">{position.quantity}</td>
-                        <td
-                          className={`p-1 border ${
-                            position.pnl < 0 ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {position.pnl.toFixed(4)}
-                        </td>
-                        <td
-                          className={`p-1 border ${
-                            position.pnl_percentage < 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {position.pnl_percentage.toFixed(6)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                              {/* 盈亏比行 */}
+                              <div className="attr-title">盈亏比</div>
+                              {position.transactions.map((transaction, idx) => (
+                                <div
+                                  key={`pnl-pct-${idx}`}
+                                  className={`data-cell ${
+                                    transaction.pnl_percentage >= 0
+                                      ? "profit"
+                                      : "loss"
+                                  } number-cell`}
+                                >
+                                  {(transaction.pnl_percentage * 100).toFixed(
+                                    2
+                                  )}
+                                  %
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="no-transactions-message">
+                              没有交易记录
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
+          </tbody>
+        </table>
+      ))}
 
-      {/* 刷新按钮 */}
       <div
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg cursor-pointer"
-        onClick={() => window.location.reload()}
+        className={`refresh-button ${isRefreshing ? "refreshing" : ""}`}
+        onClick={handleRefreshQuote}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-8 w-8"
-          fill="none"
+          width="24"
+          height="24"
           viewBox="0 0 24 24"
+          fill="none"
           stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          />
+          <path d="M1 4v6h6" />
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
         </svg>
       </div>
     </div>
