@@ -1,9 +1,9 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "$schema": "./node_modules/@tauri-apps/cli/schema.json",
   "build": {
     "beforeDevCommand": "npm run next:dev",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../out",
+    "frontendDist": "./out",
     "devUrl": "http://localhost:3001"
   },
   "identifier": "com.yourcompany.nextapp",
