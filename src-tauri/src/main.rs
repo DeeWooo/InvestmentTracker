@@ -1,217 +1,97 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use app_lib::Position;
-use rusqlite::{Connection, Result as SqliteResult};
-use std::sync::{Arc, Mutex};
-use std::sync::OnceLock;
+// 模块声明
+mod migration;
+mod commands;
+mod db;
+mod models;
+mod error;
 
-// 全局数据库连接
-static DB_CONNECTION: OnceLock<Arc<Mutex<Option<Connection>>>> = OnceLock::new();
+use rusqlite::{Connection};
+use std::path::PathBuf;
 
-fn get_db() -> SqliteResult<Arc<Mutex<Option<Connection>>>> {
-    let conn = DB_CONNECTION.get_or_init(|| Arc::new(Mutex::new(None)));
-    let mut conn_guard = conn.lock().unwrap();
-    if conn_guard.is_none() {
-        *conn_guard = Some(init_db()?);
+/// 获取数据库路径
+fn get_db_path() -> PathBuf {
+    // 优先使用 Tauri 应用数据目录，如果不可用则使用相对路径
+    #[cfg(debug_assertions)]
+    {
+        // 开发环境下使用相对路径
+        PathBuf::from("positions.db")
     }
-    Ok(conn.clone())
+    #[cfg(not(debug_assertions))]
+    {
+        // 生产环境下使用应用数据目录
+        if let Ok(data_dir) = tauri::api::path::data_dir() {
+            data_dir.join("InvestmentTracker").join("positions.db")
+        } else {
+            PathBuf::from("positions.db")
+        }
+    }
 }
 
-fn init_db() -> SqliteResult<Connection> {
-    let conn = Connection::open("positions.db")?;
-    
-    // 只保留 positions 表
+/// 获取数据库连接
+fn get_db() -> Result<Connection, String> {
+    init_db().map_err(|e| e.to_string())
+}
+
+/// 初始化数据库
+fn init_db() -> Result<Connection, String> {
+    let db_path = get_db_path();
+
+    // 确保目录存在
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+
+    // 执行数据库迁移（从旧版本到新版本）
+    migration::migrate_v0_to_v1(&conn).map_err(|e| e.to_string())?;
+
+    // 如果是全新数据库，创建新表结构
     conn.execute(
         "CREATE TABLE IF NOT EXISTS positions (
-            code TEXT PRIMARY KEY,
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
             name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
             buy_price REAL NOT NULL,
             buy_date TEXT NOT NULL,
-            portfolio TEXT,
-            symbol TEXT,
-            current_price REAL,
-            pnl REAL,
-            pnl_percentage REAL,
-            profit10 REAL,
-            profit20 REAL
+            quantity INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'POSITION',
+            portfolio TEXT
         )",
         [],
-    )?;
-    
+    ).map_err(|e| e.to_string())?;
+
+    // 创建索引
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_code ON positions(code)", [])
+        .map_err(|e| e.to_string())?;
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON positions(status)", [])
+        .map_err(|e| e.to_string())?;
+
     Ok(conn)
-}
-
-#[tauri::command]
-async fn save_position(position: Position) -> Result<Position, String> {
-    let conn = get_db().map_err(|e| e.to_string())?;
-    let conn_guard = conn.lock().unwrap();
-    let conn = conn_guard.as_ref().unwrap();
-    
-    conn.execute(
-        "INSERT OR REPLACE INTO positions (
-            code, name, quantity, buy_price, buy_date, portfolio, 
-            symbol, current_price, pnl, pnl_percentage, profit10, profit20
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (
-            &position.code,
-            &position.name,
-            position.quantity,
-            position.buy_price,
-            &position.buy_date,
-            &position.portfolio,
-            &position.symbol,
-            position.current_price,
-            position.pnl,
-            position.pnl_percentage,
-            position.profit10,
-            position.profit20,
-        ),
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok(position)
-}
-
-#[tauri::command]
-async fn get_positions() -> Result<Vec<Position>, String> {
-    let conn = get_db().map_err(|e| e.to_string())?;
-    let conn_guard = conn.lock().unwrap();
-    let conn = conn_guard.as_ref().unwrap();
-    
-    let mut stmt = conn
-        .prepare("SELECT * FROM positions")
-        .map_err(|e| e.to_string())?;
-    
-    let positions = stmt
-        .query_map([], |row| {
-            Ok(Position {
-                code: row.get(0)?,
-                name: row.get(1)?,
-                quantity: row.get(2)?,
-                buy_price: row.get(3)?,
-                buy_date: row.get(4)?,
-                portfolio: row.get(5)?,
-                symbol: row.get(6)?,
-                current_price: row.get(7)?,
-                pnl: row.get(8)?,
-                pnl_percentage: row.get(9)?,
-                profit10: row.get(10)?,
-                profit20: row.get(11)?,
-            })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<SqliteResult<Vec<Position>>>()
-        .map_err(|e| e.to_string())?;
-
-    Ok(positions)
-}
-
-#[tauri::command]
-async fn reset_database() -> Result<(), String> {
-    let db = get_db().map_err(|e| e.to_string())?;
-    {
-        let conn_guard = db.lock().unwrap();
-        let conn = conn_guard.as_ref().unwrap();
-        
-        conn.execute("DROP TABLE IF EXISTS positions", [])
-            .map_err(|e| e.to_string())?;
-    }
-    
-    // 重新初始化数据库
-    *db.lock().unwrap() = None;
-    get_db().map_err(|e| e.to_string())?;
-    
-    Ok(())
-}
-
-#[tauri::command]
-async fn get_portfolio_summary() -> Result<Vec<PortfolioSummary>, String> {
-    let conn = get_db().map_err(|e| e.to_string())?;
-    let conn_guard = conn.lock().unwrap();
-    let conn = conn_guard.as_ref().unwrap();
-    
-    // 获取组合汇总数据
-    let mut stmt = conn
-        .prepare("SELECT portfolio, SUM(quantity * buy_price) as total_cost, SUM(quantity * current_price) as total_value FROM positions GROUP BY portfolio")
-        .map_err(|e| e.to_string())?;
-    
-    let mut summaries = Vec::new();
-    
-    let portfolio_rows = stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?, // portfolio
-                row.get::<_, f64>(1)?,    // total_cost
-                row.get::<_, f64>(2)?,    // total_value
-            ))
-        })
-        .map_err(|e| e.to_string())?;
-    
-    for portfolio_result in portfolio_rows {
-        let (portfolio_name, total_cost, total_value) = portfolio_result.map_err(|e| e.to_string())?;
-        
-        // 计算盈亏和盈亏比例
-        let pnl = total_value - total_cost;
-        let pnl_percentage = if total_cost > 0.0 { pnl / total_cost } else { 0.0 };
-        
-        // 获取该投资组合的所有持仓
-        let mut pos_stmt = conn
-            .prepare("SELECT * FROM positions WHERE portfolio = ?")
-            .map_err(|e| e.to_string())?;
-        
-        let positions = pos_stmt
-            .query_map([&portfolio_name], |row| {
-                Ok(Position {
-                    code: row.get(0)?,
-                    name: row.get(1)?,
-                    quantity: row.get(2)?,
-                    buy_price: row.get(3)?,
-                    buy_date: row.get(4)?,
-                    portfolio: row.get(5)?,
-                    symbol: row.get(6)?,
-                    current_price: row.get(7)?,
-                    pnl: row.get(8)?,
-                    pnl_percentage: row.get(9)?,
-                    profit10: row.get(10)?,
-                    profit20: row.get(11)?,
-                })
-            })
-            .map_err(|e| e.to_string())?
-            .collect::<SqliteResult<Vec<Position>>>()
-            .map_err(|e| e.to_string())?;
-        
-        summaries.push(PortfolioSummary {
-            portfolio: portfolio_name,
-            total_cost,
-            total_value,
-            pnl,
-            pnl_percentage,
-            positions,
-        });
-    }
-
-    Ok(summaries)
-}
-
-#[derive(serde::Serialize)]
-struct PortfolioSummary {
-    portfolio: String,
-    total_cost: f64,
-    total_value: f64,
-    pnl: f64,
-    pnl_percentage: f64,
-    positions: Vec<Position>,
 }
 
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            get_positions,
-            save_position,
-            reset_database,
-            get_portfolio_summary
+            // 持仓相关命令
+            commands::position::save_position,
+            commands::position::get_positions,
+            commands::position::get_position_records,
+            commands::position::get_codes_in_position,
+            commands::position::close_position,
+            commands::position::delete_position,
+            commands::position::get_position_stats,
+            commands::position::get_portfolio_summary,
+            commands::position::get_all_portfolio_summaries,
+            commands::position::get_portfolios,
+            commands::position::get_portfolio_positions,
+            commands::position::get_portfolio_profit_loss_view,
+
+            // 数据库管理命令
+            commands::position::reset_database,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

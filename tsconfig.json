@@ -21,9 +21,6 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": [
-      "@tauri-apps/api"
-    ],
     "baseUrl": ".",
     "typeRoots": ["node_modules/@types"]
   },

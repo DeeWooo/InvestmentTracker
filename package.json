@@ -1,7 +1,8 @@
 {
-  "name": "next-app",
+  "name": "investment-tracker",
   "version": "0.1.0",
   "private": true,
+  "description": "A desktop investment tracking tool built with Tauri, Next.js, and Rust",
   "scripts": {
     "dev": "tauri dev",
     "next:dev": "next dev -p 3001",

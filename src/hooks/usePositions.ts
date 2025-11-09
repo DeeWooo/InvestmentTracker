@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { Position } from "@/lib/types";
+import { Position, CreatePositionRequest } from "@/lib/types";
 import { db } from "@/lib/db";
 
 export function usePositions() {
@@ -31,38 +30,39 @@ export function usePositions() {
     }
   };
 
-  const deletePosition = async (code: string) => {
+  const deletePosition = async (id: string) => {
     try {
-      await invoke("delete_position", { code });
+      await db.deletePosition(id);
       await fetchPositions(); // 重新获取数据
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除持仓失败");
     }
   };
 
-  const closePosition = async (code: string) => {
+  const closePosition = async (id: string) => {
     try {
-      await invoke("close_position", { code });
+      await db.closePosition(id);
       await fetchPositions();
     } catch (err) {
       setError(err instanceof Error ? err.message : "平仓失败");
     }
   };
 
-  const partialClose = async (code: string, quantity: number) => {
-    try {
-      await invoke("partial_close_position", { code, quantity });
-      await fetchPositions();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "部分平仓失败");
-    }
-  };
+  // 部分平仓功能暂未实现
+  // const partialClose = async (_code: string, _quantity: number) => {
+  //   try {
+  //     // 这个功能在新后端中暂时不实现，需要额外开发
+  //     throw new Error("部分平仓功能暂未实现");
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : "部分平仓失败");
+  //   }
+  // };
 
-  const buyPosition = async (position: Position) => {
+  const buyPosition = async (request: CreatePositionRequest) => {
     try {
-      console.log("Saving position to database:", position);
+      console.log("Saving position to database:", request);
       // 使用 db.savePosition 而不是直接 invoke
-      const result = await db.savePosition(position);
+      const result = await db.savePosition(request);
       console.log("Save position result:", result);
 
       // 立即重新获取数据
@@ -92,7 +92,6 @@ export function usePositions() {
     error,
     deletePosition,
     closePosition,
-    partialClose,
     refreshPositions: fetchPositions,
     buyPosition,
   };

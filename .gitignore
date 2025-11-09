@@ -1,4 +1,23 @@
+# Dependencies
 node_modules
-next-app/node_modules
-next-app/.next
-next-app/src-tauri/target
+
+# Build outputs
+.next
+out
+
+# Rust build
+src-tauri/target
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store

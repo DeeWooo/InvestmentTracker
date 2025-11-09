@@ -4,22 +4,40 @@
 
 ## 一、概览
 
-### 现有项目结构
+### 现有项目结构（已扁平化）
 ```
 InvestmentTracker/
-├── next-app/
-│   ├── src/
-│   │   ├── app/           # Next.js 应用层
-│   │   ├── components/    # React 组件
-│   │   ├── hooks/         # 自定义 Hook
-│   │   ├── lib/           # 工具函数和类型
-│   │   └── types/         # TypeScript 类型定义
-│   └── src-tauri/         # Rust 后端（Tauri）
+├── src/                   # 前端代码（Next.js + React）
+│   ├── app/               # Next.js 应用层
+│   ├── components/        # React 组件
+│   ├── hooks/             # 自定义 Hook
+│   ├── lib/               # 工具函数和类型
+│   └── types/             # TypeScript 类型定义
+│
+└── src-tauri/             # 后端代码（Rust + Tauri）
+    ├── src/
+    │   ├── main.rs        # 应用入口
+    │   ├── lib.rs         # 库文件
+    │   ├── commands/       # Tauri 命令（已模块化）
+    │   ├── db/            # 数据库操作（已模块化）
+    │   ├── models/        # 数据模型（已模块化）
+    │   ├── error.rs       # 错误处理
+    │   └── migration.rs   # 数据库迁移
 ```
 
-### 现有问题分析
+### 优化进度
 
-基于前面的存储方案讨论，目前代码有以下问题：
+#### ✅ 已完成的优化
+1. **项目结构扁平化** - `next-app/` 层级已移除，代码直接在根目录
+2. **后端模块化** - `main.rs` 已拆分为 `commands/`, `db/`, `models/` 等模块
+3. **数据库迁移** - 新增 `migration.rs`，支持版本升级
+4. **错误处理** - 新增 `error.rs` 模块
+5. **数据库表结构** - 已优化为 8 个字段（id, code, name, buy_price, buy_date, quantity, status, portfolio）
+
+#### ⏳ 待优化项（仍需完成）
+1. **前端类型分离** - 需将 `src/lib/types.ts` 拆分为存储类型和展示类型
+2. **前端 Hook 更新** - `usePositions` 需适配新的后端 API
+3. **新增平仓组件** - 需创建 `SellPositionForm` 组件
 
 ---
 
@@ -114,161 +132,86 @@ export interface PortfolioSummary {
 
 ---
 
-## 三、Rust 后端优化（src-tauri/src/main.rs）
+## 三、Rust 后端优化（src-tauri/src）
 
-### 当前问题
+### 优化状态：✅ 主要已完成
 
-#### 问题 1: 表结构与数据库设计不一致
-```rust
-// ❌ 现在的表结构有问题
-"CREATE TABLE IF NOT EXISTS positions (
-    code TEXT PRIMARY KEY,      // ❌ 主键是 code，会导致覆盖
-    quantity INTEGER NOT NULL,
-    buy_price REAL NOT NULL,
-    buy_date TEXT NOT NULL,
-    portfolio TEXT,
-    symbol TEXT,
-    current_price REAL,         // ❌ 实时数据不应该存
-    pnl REAL,                   // ❌ 计算字段
-    pnl_percentage REAL,        // ❌ 计算字段
-    profit10 REAL,              // ❌ Java 版本没有
-    profit20 REAL               // ❌ Java 版本没有
-)"
-```
+#### ✅ 已实现的优化
 
-#### 问题 2: INSERT OR REPLACE 会覆盖数据
-```rust
-// ❌ 这样会导致多次买入时第一次的记录被覆盖
-"INSERT OR REPLACE INTO positions (...)"
-```
+1. **表结构优化** - 数据库已采用正确的 8 字段设计
+   ```rust
+   // ✅ 现有的表结构正确
+   CREATE TABLE IF NOT EXISTS positions (
+       id TEXT PRIMARY KEY,
+       code TEXT NOT NULL,
+       name TEXT NOT NULL,
+       buy_price REAL NOT NULL,
+       buy_date TEXT NOT NULL,
+       quantity INTEGER NOT NULL,
+       status TEXT NOT NULL DEFAULT 'POSITION',
+       portfolio TEXT
+   )
+   ```
 
-#### 问题 3: API 设计不清晰
-```rust
-// ❌ 调用方式不清楚意图
-async fn closePosition(code) -> ...  // 平仓哪一条记录？
-async fn partialClose(code, quantity) -> ...  // 如何知道平仓哪些记录？
-```
+2. **模块化架构** - 代码已按以下结构组织
+   - `commands/position.rs` - 所有 Tauri 命令
+   - `db/position_repo.rs` - 数据库操作
+   - `models/position.rs` - 数据模型
+   - `error.rs` - 错误处理
+   - `migration.rs` - 数据库迁移
 
-### 优化建议
+3. **清晰的 API 设计** - 已实现的命令
+   ```rust
+   // ✅ 保存新的买入记录
+   #[tauri::command]
+   pub async fn save_position(...) -> Result<Position, String>
 
-#### 1. **新的数据库初始化**
-```rust
-fn init_db() -> SqliteResult<Connection> {
-    let conn = Connection::open("positions.db")?;
+   // ✅ 获取所有持仓中的不同 code
+   #[tauri::command]
+   pub async fn get_codes_in_position() -> Result<Vec<String>, String>
 
-    // 创建新表结构（对齐 Java 版本）
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS positions (
-            id TEXT PRIMARY KEY,
-            code TEXT NOT NULL,
-            name TEXT NOT NULL,
-            buy_price REAL NOT NULL,
-            buy_date TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            status TEXT NOT NULL DEFAULT 'POSITION',
-            portfolio TEXT
-        )",
-        [],
-    )?;
+   // ✅ 获取某个 code 的所有买入记录
+   #[tauri::command]
+   pub async fn get_position_records(code: String) -> Result<Vec<Position>, String>
 
-    // 创建索引
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_code ON positions(code)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON positions(status)", [])?;
+   // ✅ 平仓特定的一条记录（按 id）
+   #[tauri::command]
+   pub async fn close_position(id: String) -> Result<(), String>
 
-    Ok(conn)
-}
-```
+   // ✅ 删除记录
+   #[tauri::command]
+   pub async fn delete_position(id: String) -> Result<(), String>
 
-#### 2. **清晰的 API 设计**
-```rust
-// ✅ 保存新的买入记录
-#[tauri::command]
-async fn save_position(
-    code: String,
-    name: String,
-    buy_price: f64,
-    buy_date: String,
-    quantity: i32,
-    portfolio: String,
-) -> Result<PositionRecord, String>
+   // ✅ 获取持仓统计
+   #[tauri::command]
+   pub async fn get_position_stats(code: String) -> Result<PositionStats, String>
 
-// ✅ 获取所有持仓中的不同 code
-#[tauri::command]
-async fn get_codes_in_position() -> Result<Vec<String>, String>
+   // ✅ 获取组合汇总
+   #[tauri::command]
+   pub async fn get_portfolio_summary(portfolio: String) -> Result<PortfolioSummary, String>
 
-// ✅ 获取某个 code 的所有买入记录
-#[tauri::command]
-async fn get_position_records(code: String) -> Result<Vec<PositionRecord>, String>
+   // ✅ 获取所有组合汇总
+   #[tauri::command]
+   pub async fn get_all_portfolio_summaries() -> Result<Vec<PortfolioSummary>, String>
+   ```
 
-// ✅ 平仓特定的一条记录（按 id）
-#[tauri::command]
-async fn close_position(id: String) -> Result<(), String>
+#### ⏳ 可进一步优化的地方
 
-// ✅ 删除记录
-#[tauri::command]
-async fn delete_position(id: String) -> Result<(), String>
-
-// ✅ 获取计算后的持仓汇总（前端需要）
-#[tauri::command]
-async fn get_position_summary(code: String) -> Result<PositionSummary, String>
-```
-
-#### 3. **计算逻辑清晰化**
-```rust
-// 核心计算函数（不存储，只计算）
-fn calculate_position_summary(records: Vec<PositionRecord>) -> PositionSummary {
-    let total_quantity: i32 = records.iter().sum_by(|r| r.quantity);
-    let total_cost: f64 = records.iter().sum_by(|r| r.quantity as f64 * r.buy_price);
-    let avg_cost_price = if total_quantity > 0 {
-        total_cost / total_quantity as f64
-    } else {
-        0.0
-    };
-
-    PositionSummary {
-        total_quantity,
-        total_cost,
-        avg_cost_price,
-        // 其他字段由前端计算
-    }
-}
-```
+1. **错误处理** - 可补充更详细的错误类型
+2. **数据库连接池** - 目前每次都创建新连接，可优化为连接池
+3. **单元测试** - 添加 Rust 单元测试覆盖
 
 ---
 
 ## 四、前端组件优化（React）
 
-### 当前问题
+### 优化状态：⏳ 需要完成
 
-#### 问题 1: usePositions Hook 有过时的方法调用
-```typescript
-// ❌ 调用已删除的方法
-async fn deletePosition(code: string) {
-  await invoke("delete_position", { code });  // 现在需要 id
-}
+#### 待优化项
 
-async fn closePosition(code: string) {
-  await invoke("close_position", { code });   // 现在需要 id
-}
-
-async fn partialClose(code: string, quantity: number) {
-  await invoke("partial_close_position", ...);  // 后端没有这个方法
-}
-```
-
-#### 问题 2: BuyPositionForm 逻辑混乱
-```typescript
-// ❌ 混淆了数据库字段和展示字段
-const position: Position = {
-  symbol: formData.symbol,
-  code: formData.code || formData.symbol,
-  name: formData.name || formData.symbol,
-  quantity: Number(formData.quantity),
-  buy_price: Number(formData.price),
-  buy_date: formData.date,
-  // ... 这里有很多默认值和计算字段
-};
-```
+1. **usePositions Hook 需要更新** - 确保适配后端新 API
+2. **前端类型定义需要分离** - 将存储类型和展示类型分开
+3. **新增 SellPositionForm 组件** - 平仓功能的独立表单
 
 ### 优化建议
 
@@ -499,30 +442,28 @@ export const db = {
 
 ---
 
-## 六、实施优化的步骤
+## 六、剩余优化任务
 
-### 阶段 1: 数据迁移（1天）
-- [ ] 执行数据库迁移脚本
-- [ ] 备份旧数据
+### 已完成 ✅ （后端 + 基础设施）
+- [x] **阶段 1: 数据库迁移** - 表结构优化、索引创建
+- [x] **阶段 2: 后端重构** - 模块化架构、错误处理、数据库操作封装
 
-### 阶段 2: 后端重构（2天）
-- [ ] 重写 Rust main.rs（新表结构、新 API）
-- [ ] 实现计算函数
-- [ ] 编写单元测试
+### 待完成 ⏳ （前端适配）
+- [ ] **阶段 3: 前端适配** （2-3天）
+  - [ ] 更新 `src/lib/types.ts`（分离存储类型和展示类型）
+  - [ ] 更新 `src/lib/db.ts`（新的 API 接口）
+  - [ ] 重写 `src/hooks/usePositions.ts`（适配新 API）
+  - [ ] 更新 `src/components/BuyPositionForm.tsx`
+  - [ ] 新增 `src/components/SellPositionForm.tsx`（平仓表单）
+  - [ ] 更新其他相关组件
 
-### 阶段 3: 前端适配（2-3天）
-- [ ] 更新 types.ts（分离存储类型和展示类型）
-- [ ] 重写 db.ts（新的 API 接口）
-- [ ] 重写 usePositions hook
-- [ ] 更新 BuyPositionForm
-- [ ] 新增 SellPositionForm
-- [ ] 更新其他组件
+- [ ] **阶段 4: 测试** （1 天）
+  - [ ] 手动测试买入功能
+  - [ ] 手动测试平仓功能
+  - [ ] 手动测试删除功能
+  - [ ] 集成测试
 
-### 阶段 4: 测试（1day）
-- [ ] 集成测试
-- [ ] 兼容性测试
-
-**总计：6-7天**
+**剩余工作时间：3-4 天**
 
 ---
 
@@ -562,3 +503,12 @@ SQLite 数据库
 - ✅ 数据流更易追踪
 - ✅ 错误处理更一致
 - ✅ 易于扩展和维护
+
+---
+
+## 八、文档更新记录
+
+| 日期 | 更新内容 |
+|------|---------|
+| 2025-11-08 | 迁移后文档更新：反映已完成的后端优化，标记待完成的前端适配任务 |
+| 2025-11-07 | 初始版本：代码优化建议 |

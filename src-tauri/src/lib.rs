@@ -1,19 +1,17 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+/// 数据库持仓记录
+/// 对应 Java 版本的 PositionEntity，共 8 个字段
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Position {
-    pub symbol: String,
-    pub code: String,
-    pub name: String,
-    pub quantity: i32,
-    pub buy_price: f64,
-    pub buy_date: String,
-    pub portfolio: String,
-    pub pnl: f64,
-    pub pnl_percentage: f64,
-    pub current_price: f64,
-    pub profit10: f64,
-    pub profit20: f64,
+    pub id: String,           // UUID，唯一主键
+    pub code: String,         // 股票代码
+    pub name: String,         // 股票名称
+    pub buy_price: f64,       // 买入价格
+    pub buy_date: String,     // 买入日期 (YYYY-MM-DD)
+    pub quantity: i32,        // 买入数量
+    pub status: String,       // 状态：POSITION 或 CLOSE
+    pub portfolio: String,    // 所属投资组合
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

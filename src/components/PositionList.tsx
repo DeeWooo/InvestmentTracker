@@ -13,17 +13,16 @@ import { Button } from '@/components/ui/button';
 import { usePositions } from '@/hooks/usePositions';
 import { Spinner } from '@/components/ui/spinner';
 import { BuyPositionForm } from './BuyPositionForm';
-import { Position } from '@/lib/types';
+import { CreatePositionRequest } from '@/lib/types';
 
 export default function PositionList() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { 
-    positions, 
-    isLoading, 
-    error: positionsError, 
-    deletePosition, 
-    closePosition, 
-    partialClose, 
+  const {
+    positions,
+    isLoading,
+    error: positionsError,
+    deletePosition,
+    closePosition,
     buyPosition,
     refreshPositions
   } = usePositions();
@@ -36,7 +35,7 @@ export default function PositionList() {
     isArray: Array.isArray(positions),
   });
 
-  const handleBuyPosition = async (data: Position) => {
+  const handleBuyPosition = async (data: CreatePositionRequest) => {
     try {
       console.log('Attempting to buy position:', data);
       const result = await buyPosition(data);
@@ -164,64 +163,23 @@ export default function PositionList() {
         </TableHeader>
         <TableBody>
           {filteredPositions.map((position) => (
-            <TableRow key={position.code}>
-              <TableCell>{position.code}</TableCell>
-              <TableCell>{position.name}</TableCell>
-              <TableCell
-                style={{ 
-                  color: position.pnl >= 0 ? '#dc2626' : '#16a34a',
-                  fontWeight: 500
-                }}
-              >
-                {position.pnl.toFixed(4)}
-              </TableCell>
-              <TableCell
-                style={{ 
-                  color: position.pnl_percentage >= 0 ? '#dc2626' : '#16a34a',
-                  fontWeight: 500
-                }}
-              >
-                {(position.pnl_percentage * 100).toFixed(2)}%
-              </TableCell>
-              <TableCell>{position.quantity}</TableCell>
-              <TableCell>{position.current_price.toFixed(4)}</TableCell>
-              <TableCell>{position.buy_price.toFixed(4)}</TableCell>
-              <TableCell>{position.profit10.toFixed(4)}</TableCell>
-              <TableCell>{position.profit20.toFixed(4)}</TableCell>
-              <TableCell>{position.buy_date}</TableCell>
-              <TableCell>{position.portfolio}</TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button
+            <TableRow key={position.id}><TableCell>{position.code}</TableCell><TableCell>{position.name}</TableCell><TableCell>待计算</TableCell><TableCell>待计算</TableCell><TableCell>{position.quantity}</TableCell><TableCell>待获取</TableCell><TableCell>{position.buy_price.toFixed(4)}</TableCell><TableCell>{(position.buy_price * 1.1).toFixed(4)}</TableCell><TableCell>{(position.buy_price * 1.2).toFixed(4)}</TableCell><TableCell>{position.buy_date}</TableCell><TableCell>{position.portfolio}</TableCell><TableCell><div className="flex gap-2"><Button
                     variant="outline"
                     size="sm"
-                    onClick={() => closePosition(position.code)}
-                  >
-                    <ArrowDownLeft className="h-4 w-4 mr-1" />
-                    平仓
-                  </Button>
-                  <Button
+                    onClick={() => closePosition(position.id)}
+                  ><ArrowDownLeft className="h-4 w-4 mr-1" />平仓</Button><Button
                     variant="outline"
                     size="sm"
+                    disabled
+                    title="部分卖出功能尚在开发中"
                     onClick={() => {
-                      // TODO: 添加一个弹窗来输入部分平仓数量
-                      partialClose(position.code, position.quantity / 2);
+                      alert('部分卖出功能暂未实现');
                     }}
-                  >
-                    <ArrowDown className="h-4 w-4 mr-1" />
-                    部分卖出
-                  </Button>
-                  <Button
+                  ><ArrowDown className="h-4 w-4 mr-1" />部分卖出</Button><Button
                     variant="outline"
                     size="sm"
-                    onClick={() => deletePosition(position.code)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    删除
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
+                    onClick={() => deletePosition(position.id)}
+                  ><Trash2 className="h-4 w-4 mr-1" />删除</Button></div></TableCell></TableRow>
           ))}
         </TableBody>
       </Table>

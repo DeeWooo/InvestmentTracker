@@ -1,6 +1,6 @@
 import React from 'react';
 import { cookies } from 'next/headers';
-
+import './globals.css';
 
 export const dynamic = 'force-dynamic'
 

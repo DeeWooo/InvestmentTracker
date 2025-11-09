@@ -9,14 +9,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Position } from "@/lib/types";
+import { CreatePositionRequest } from "@/lib/types";
 
 interface BuyPositionFormProps {
-  onBuy: (position: Position) => Promise<void>;
+  onBuy: (request: CreatePositionRequest) => Promise<void>;
 }
 
 interface FormData {
-  symbol: string;
   code: string;
   name: string;
   quantity: string; // 改为quantity替代shares
@@ -28,7 +27,6 @@ interface FormData {
 export function BuyPositionForm({ onBuy }: BuyPositionFormProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>({
-    symbol: '',
     code: '',
     name: '',
     quantity: '', // 改为quantity
@@ -39,35 +37,20 @@ export function BuyPositionForm({ onBuy }: BuyPositionFormProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     try {
-      const position: Position = {
-        symbol: formData.symbol,
-        code: formData.code || formData.symbol,
-        name: formData.name || formData.symbol,
+      const request: CreatePositionRequest = {
+        code: formData.code,
+        name: formData.name || formData.code,
         quantity: Number(formData.quantity),
         buy_price: Number(formData.price),
         buy_date: formData.date,
-        portfolio: formData.portfolio,
-        pnl: 0,
-        pnl_percentage: 0,
-        current_price: Number(formData.price),
-        profit10: Number(formData.price) * 1.1,  // 添加这些计算
-        profit20: Number(formData.price) * 1.2,
+        portfolio: formData.portfolio || 'default',
       };
 
-      console.log('Attempting to submit position:', position);
-      
-      // 数据验证
-      if (!position.code || !position.quantity || !position.buy_price || !position.buy_date) {
-        throw new Error('请填写所有必需字段');
-      }
-
-      await onBuy(position);
-      console.log('Position submitted successfully');
+      await onBuy(request);
       setOpen(false);
       setFormData({
-        symbol: '',
         code: '',
         name: '',
         quantity: '',
@@ -76,8 +59,7 @@ export function BuyPositionForm({ onBuy }: BuyPositionFormProps) {
         portfolio: 'default',
       });
     } catch (error) {
-      console.error('Failed to buy position:', error);
-      alert(error instanceof Error ? error.message : '买入失败，请重试');
+      console.error('Failed to save position:', error);
     }
   };
 
@@ -92,15 +74,14 @@ export function BuyPositionForm({ onBuy }: BuyPositionFormProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid w-full items-center gap-2">
-            <Label htmlFor="symbol">股票代码</Label>
+            <Label htmlFor="code">股票代码</Label>
             <Input
-              id="symbol"
-              name="symbol"
-              value={formData.symbol}
-              onChange={(e) => setFormData({ 
-                ...formData, 
-                symbol: e.target.value,
-                code: e.target.value,  // 自动同步更新code
+              id="code"
+              name="code"
+              value={formData.code}
+              onChange={(e) => setFormData({
+                ...formData,
+                code: e.target.value,
                 name: e.target.value   // 自动同步更新name
               })}
               required

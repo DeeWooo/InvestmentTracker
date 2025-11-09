@@ -1,6 +1,7 @@
-import { Position, Portfolio, Transaction } from "@/lib/types";
+import { Position, Portfolio } from "@/lib/types";
 
 // 将持仓数据转换为投资组合数据
+// 注：新的 Portfolio 组件已采用简化的实现，这些函数已过时
 export function buildPortfoliosFromPositions(
   positions: Position[]
 ): Portfolio[] {
@@ -30,54 +31,18 @@ export function buildPortfoliosFromPositions(
     // 计算持仓成本
     const positionCost = position.buy_price * position.quantity;
 
-    // 更新投资组合总成本和盈亏
+    // 更新投资组合总成本
     portfolioMap[portfolioName].totalCost += positionCost;
-    portfolioMap[portfolioName].pnl += position.pnl || 0;
-
-    // 确保position有transactions数组
-    if (!position.transactions || !Array.isArray(position.transactions)) {
-      // 如果没有交易记录，创建一个基本的交易记录
-      position.transactions = [
-        {
-          date: position.buy_date,
-          price: position.buy_price,
-          quantity: position.quantity,
-          pnl: position.pnl || 0,
-          pnl_percentage: position.pnl_percentage || 0,
-        },
-      ];
-    }
 
     // 将持仓添加到投资组合中
     portfolioMap[portfolioName].positions.push(position);
   });
 
-  // 计算每个投资组合的盈亏比例
-  Object.values(portfolioMap).forEach((portfolio) => {
-    portfolio.pnlPercentage =
-      portfolio.totalCost > 0 ? portfolio.pnl / portfolio.totalCost : 0;
-  });
-
   return Object.values(portfolioMap);
 }
 
-// 添加一个工具函数，确保每个持仓都有交易记录
+// 添加一个工具函数，确保每个持仓都有基本属性
 export function ensureTransactions(positions: Position[]): Position[] {
-  return positions.map((position) => {
-    if (!position.transactions || position.transactions.length === 0) {
-      return {
-        ...position,
-        transactions: [
-          {
-            date: position.buy_date,
-            price: position.buy_price,
-            quantity: position.quantity,
-            pnl: position.pnl || 0,
-            pnl_percentage: position.pnl_percentage || 0,
-          },
-        ],
-      };
-    }
-    return position;
-  });
+  // 新的数据结构不需要transaction字段，直接返回原数组
+  return positions;
 }

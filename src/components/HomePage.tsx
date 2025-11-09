@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import PositionList from './PositionList';
 import Portfolio from './Portfolio';
+import PortfolioProfitLossView from './PortfolioProfitLossView';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('positions');
@@ -64,23 +65,28 @@ export default function HomePage() {
           >
             持仓列表
           </Button>
-          <Button 
-            variant={activeTab === 'portfolio' ? 'primary' : 'outline'} 
+          <Button
+            variant={activeTab === 'portfolio' ? 'primary' : 'outline'}
             className="w-full justify-start"
             onClick={() => setActiveTab('portfolio')}
           >
             投资组合
+          </Button>
+          <Button
+            variant={activeTab === 'profitloss' ? 'primary' : 'outline'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab('profitloss')}
+          >
+            盈亏视图
           </Button>
         </nav>
       </div>
 
       {/* 主内容区 */}
       <div className="flex-1 p-6 overflow-y-auto">
-        {activeTab === 'positions' ? (
-          <PositionList />
-        ) : (
-          <Portfolio />
-        )}
+        {activeTab === 'positions' && <PositionList />}
+        {activeTab === 'portfolio' && <Portfolio />}
+        {activeTab === 'profitloss' && <PortfolioProfitLossView />}
       </div>
     </div>
   );
