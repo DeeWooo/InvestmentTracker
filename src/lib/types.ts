@@ -131,7 +131,7 @@ export interface TargetProfitLoss {
 // 投资组合级汇总
 export interface PortfolioProfitLoss {
   portfolio: string;                     // 投资组合名称
-  full_position: number;                 // 满仓金额
+  full_position: number;                 // 单标满仓成本
   target_profit_losses: TargetProfitLoss[];  // 该组合下所有股票的汇总
   sum_position_cost: number;             // 总持仓成本
   sum_profit_losses: number;             // 总盈亏
