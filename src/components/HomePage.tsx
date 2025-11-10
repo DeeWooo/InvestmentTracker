@@ -58,8 +58,8 @@ export default function HomePage() {
           <p className="text-sm text-gray-500">总资产: ¥{portfolio.totalValue.toLocaleString()}</p>
         </div>
         <nav className="space-y-2">
-          <Button 
-            variant={activeTab === 'positions' ? 'primary' : 'outline'} 
+          <Button
+            variant={activeTab === 'positions' ? 'primary' : 'outline'}
             className="w-full justify-start"
             onClick={() => setActiveTab('positions')}
           >

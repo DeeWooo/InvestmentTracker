@@ -63,6 +63,12 @@ impl PortfolioService {
                 }
             }
 
+            // 按持仓成本从高到低排序
+            target_losses.sort_by(|a, b| {
+                b.cost_position_rate.partial_cmp(&a.cost_position_rate)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+
             // 计算投资组合级汇总
             let portfolio_loss = Self::create_portfolio_profit_loss(
                 portfolio_name,

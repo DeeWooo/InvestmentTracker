@@ -252,55 +252,38 @@ export default function PortfolioProfitLossView() {
                         交易明细 <span className="text-blue-600">(共{target.position_profit_losses.length}笔)</span>
                       </h4>
 
-                      {/* 竖向表格（行表头，列为交易） */}
+                      {/* 竖向表格（行表头，列为交易）- 自适应换行 */}
                       <div className="overflow-x-auto">
-                        <table className="border-2 border-gray-400">
+                        <table className="text-center">
                           <tbody>
-                            {/* 买入日期行 */}
-                            <tr>
-                              <td className="border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700 w-24">买入日期</td>
-                              {target.position_profit_losses.map((position: PositionProfitLoss) => (
-                                <td key={position.id} className="border border-gray-400 px-3 py-2 text-sm text-gray-900 text-center">
+                            {/* 表头列 */}
+                            <tr className="inline-block align-top">
+                              <th className="block border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700">买入日期</th>
+                              <th className="block border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700">买入价格</th>
+                              <th className="block border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700">数量</th>
+                              <th className="block border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700">盈亏</th>
+                              <th className="block border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700">盈亏比</th>
+                            </tr>
+                            {/* 每笔交易一列 */}
+                            {target.position_profit_losses.map((position: PositionProfitLoss) => (
+                              <tr key={position.id} className="inline-block align-top">
+                                <td className="block border border-gray-400 px-3 py-2 text-sm text-gray-900">
                                   {position.buy_date}
                                 </td>
-                              ))}
-                            </tr>
-                            {/* 买入价格行 */}
-                            <tr>
-                              <td className="border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700 w-24">买入价格</td>
-                              {target.position_profit_losses.map((position: PositionProfitLoss) => (
-                                <td key={position.id} className="border border-gray-400 px-3 py-2 text-sm text-gray-900 text-right">
+                                <td className="block border border-gray-400 px-3 py-2 text-sm text-gray-900 text-right">
                                   {formatCurrency(position.buy_price)}
                                 </td>
-                              ))}
-                            </tr>
-                            {/* 数量行 */}
-                            <tr>
-                              <td className="border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700 w-24">数量</td>
-                              {target.position_profit_losses.map((position: PositionProfitLoss) => (
-                                <td key={position.id} className="border border-gray-400 px-3 py-2 text-sm text-gray-900 text-right">
+                                <td className="block border border-gray-400 px-3 py-2 text-sm text-gray-900 text-right">
                                   {position.quantity}
                                 </td>
-                              ))}
-                            </tr>
-                            {/* 盈亏行 */}
-                            <tr>
-                              <td className="border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700 w-24">盈亏</td>
-                              {target.position_profit_losses.map((position: PositionProfitLoss) => (
-                                <td key={position.id} className={`border border-gray-400 px-3 py-2 text-sm text-right font-bold ${getPnLStyle(position.profit_loss)}`}>
+                                <td className={`block border border-gray-400 px-3 py-2 text-sm text-right font-bold ${getPnLStyle(position.profit_loss)}`}>
                                   {formatCurrency(position.profit_loss)}
                                 </td>
-                              ))}
-                            </tr>
-                            {/* 盈亏比行 */}
-                            <tr>
-                              <td className="border border-gray-400 px-3 py-2 bg-gray-100 font-semibold text-sm text-gray-700 w-24">盈亏比</td>
-                              {target.position_profit_losses.map((position: PositionProfitLoss) => (
-                                <td key={position.id} className={`border border-gray-400 px-3 py-2 text-sm text-right font-bold ${getPnLStyle(position.profit_loss)}`}>
+                                <td className={`block border border-gray-400 px-3 py-2 text-sm text-right font-bold ${getPnLStyle(position.profit_loss)}`}>
                                   {formatPercentage(position.profit_loss_rate)}
                                 </td>
-                              ))}
-                            </tr>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
