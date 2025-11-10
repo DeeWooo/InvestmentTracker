@@ -58,8 +58,8 @@ impl PositionProfitLoss {
     pub fn from_position(position: crate::models::Position, real_price: f64) -> Self {
         let position_cost = position.buy_price * position.quantity as f64;
         let profit_loss = (real_price - position.buy_price) * position.quantity as f64;
-        let profit_loss_rate = if position.buy_price != 0.0 {
-            (real_price - position.buy_price) / position.buy_price
+        let profit_loss_rate = if position_cost != 0.0 {
+            profit_loss / position_cost
         } else {
             0.0
         };
