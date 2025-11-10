@@ -156,9 +156,6 @@ export default function PortfolioProfitLossView() {
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle className="text-xl">{portfolio.portfolio}</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
-                  满仓金额: {formatCurrency(portfolio.full_position)}
-                </p>
               </div>
               <div className="text-right space-y-1">
                 <div className="grid grid-cols-2 gap-4 text-right">
@@ -202,7 +199,7 @@ export default function PortfolioProfitLossView() {
                       </div>
                     </div>
                     <div className="text-center bg-blue-50 px-4 py-2 rounded-lg">
-                      <div className="text-sm text-gray-600 mb-1">交易笔数</div>
+                      <div className="text-sm text-gray-600 mb-1">持仓笔数</div>
                       <div className="text-4xl font-bold text-blue-600">
                         {target.position_profit_losses.length}
                       </div>
@@ -233,23 +230,23 @@ export default function PortfolioProfitLossView() {
                     </div>
                   </div>
 
-                  {/* 第三行：建议买入点 / 建议卖出点 */}
+                  {/* 第三行：建议买入区间 / 建议卖出区间 */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                      <div className="text-xs text-gray-600 mb-1">建议买入点</div>
-                      <div className="text-lg font-bold text-green-700">{formatCurrency(target.recommended_buy_in_point)}</div>
+                      <div className="text-xs text-gray-600 mb-1">建议买入区间 (-10%)</div>
+                      <div className="text-lg font-bold text-green-700">&lt; {formatCurrency(target.recommended_buy_in_point)}</div>
                     </div>
                     <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                      <div className="text-xs text-gray-600 mb-1">建议卖出点</div>
-                      <div className="text-lg font-bold text-red-700">{formatCurrency(target.recommended_sale_out_point)}</div>
+                      <div className="text-xs text-gray-600 mb-1">建议卖出区间 (+10%)</div>
+                      <div className="text-lg font-bold text-red-700">&gt; {formatCurrency(target.recommended_sale_out_point)}</div>
                     </div>
                   </div>
 
-                  {/* 展开的交易明细 - 竖向表格 */}
+                  {/* 展开的持仓明细 - 竖向表格 */}
                   {selectedStocks.has(target.code) && (
                     <div className="mt-4 border-t pt-4">
                       <h4 className="font-semibold mb-3 text-gray-700">
-                        交易明细 <span className="text-blue-600">(共{target.position_profit_losses.length}笔)</span>
+                        持仓明细 <span className="text-blue-600">(共{target.position_profit_losses.length}笔)</span>
                       </h4>
 
                       {/* 竖向表格（行表头，列为交易）- 自适应换行 */}
