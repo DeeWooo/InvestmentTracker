@@ -36,15 +36,21 @@ export function usePositions() {
       await fetchPositions(); // 重新获取数据
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除持仓失败");
+      throw err; // 抛出错误以便调用者处理
     }
   };
 
   const closePosition = async (id: string) => {
     try {
+      console.log('closePosition called with id:', id);
+      console.log('Calling db.closePosition...');
       await db.closePosition(id);
+      console.log('Close position successful');
       await fetchPositions();
     } catch (err) {
+      console.error('closePosition error:', err);
       setError(err instanceof Error ? err.message : "平仓失败");
+      throw err; // 抛出错误以便调用者处理
     }
   };
 

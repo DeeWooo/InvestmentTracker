@@ -68,7 +68,7 @@ export function BuyPositionForm({ onBuy }: BuyPositionFormProps) {
       <DialogTrigger asChild>
         <Button>买入新持仓</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-white">
         <DialogHeader>
           <DialogTitle>买入新持仓</DialogTitle>
         </DialogHeader>
