@@ -4,10 +4,16 @@
 
 **一款专业的桌面投资组合管理工具，帮助您轻松追踪和分析投资表现**
 
+![GitHub stars](https://img.shields.io/github/stars/Deewooo/InvestmentTracker?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Deewooo/InvestmentTracker?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/Deewooo/InvestmentTracker?style=social)
+
 ![Tech Stack](https://img.shields.io/badge/Tauri-2.2-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black)
 ![Rust](https://img.shields.io/badge/Rust-1.70+-CE422B)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Last Commit](https://img.shields.io/github/last-commit/Deewooo/InvestmentTracker)
+![Issues](https://img.shields.io/github/issues/Deewooo/InvestmentTracker)
 
 [功能介绍](#-功能介绍) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [文档](#-文档)
 
