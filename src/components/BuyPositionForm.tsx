@@ -121,6 +121,18 @@ export function BuyPositionForm({ onBuy }: BuyPositionFormProps) {
               required
             />
           </div>
+          <div className="grid w-full items-center gap-2">
+            <Label htmlFor="portfolio">投资组合</Label>
+            <Input
+              id="portfolio"
+              name="portfolio"
+              type="text"
+              value={formData.portfolio}
+              onChange={(e) => setFormData({ ...formData, portfolio: e.target.value })}
+              placeholder="例如：default, 价值投资, 成长股"
+              required
+            />
+          </div>
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               取消
