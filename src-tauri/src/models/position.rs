@@ -97,7 +97,7 @@ pub struct CreatePositionRequest {
 impl From<CreatePositionRequest> for Position {
     fn from(req: CreatePositionRequest) -> Self {
         Self::new(
-            req.code,
+            req.code.to_lowercase(),  // 统一转为小写
             req.name,
             req.buy_price,
             req.buy_date,

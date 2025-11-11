@@ -183,6 +183,39 @@ pub async fn reset_database() -> Result<()> {
     Ok(())
 }
 
+/// 获取单只股票的名称和价格（用于表单自动填充）
+#[tauri::command]
+pub async fn fetch_stock_name(code: String) -> Result<serde_json::Value> {
+    // 获取单只股票的实时数据
+    match QuoteService::fetch_real_quotes(vec![code.clone()]).await {
+        Ok(quotes) => {
+            // 查找匹配的价格数据
+            if let Some(quote) = quotes.values().next() {
+                Ok(serde_json::json!({
+                    "code": quote.code.clone(),
+                    "name": quote.name.clone(),
+                    "price": quote.real_price
+                }))
+            } else {
+                // 获取失败，返回原始代码
+                Ok(serde_json::json!({
+                    "code": code.clone(),
+                    "name": code,
+                    "price": null
+                }))
+            }
+        }
+        Err(_) => {
+            // 获取失败，返回原始代码
+            Ok(serde_json::json!({
+                "code": code.clone(),
+                "name": code,
+                "price": null
+            }))
+        }
+    }
+}
+
 /// 获取所有投资组合的完整盈亏视图（带实时价格）
 /// 对应 Java 版本的 PortfolioService.show()
 #[tauri::command]
@@ -195,6 +228,11 @@ pub async fn get_portfolio_profit_loss_view(use_mock: Option<bool>) -> Result<Ve
         .filter(|p| p.status == "POSITION")
         .collect();
 
+    // 如果没有持仓，返回空列表
+    if positions.is_empty() {
+        return Ok(vec![]);
+    }
+
     // 获取所有需要的股票代码
     let codes: Vec<String> = positions.iter()
         .map(|p| p.code.clone())
@@ -202,17 +240,77 @@ pub async fn get_portfolio_profit_loss_view(use_mock: Option<bool>) -> Result<Ve
         .into_iter()
         .collect();
 
-    // 获取实时价格
-    let quotes = if use_mock.unwrap_or(true) {
-        // 使用模拟数据（开发阶段）
+    println!("📦 获取持仓的股票代码列表 (共{}只):", codes.len());
+    for code in &codes {
+        println!("   - {}", code);
+    }
+
+    // 获取价格 - 智能降级策略
+    let quotes = if use_mock.unwrap_or(false) {
+        // 强制使用模拟数据
+        println!("使用模拟数据（用户指定）");
         QuoteService::mock_quotes(codes)
     } else {
-        // 使用真实API（生产阶段）
-        QuoteService::fetch_real_quotes(codes).await?
+        // 尝试实时价格，失败时自动降级
+        println!("尝试获取实时价格...");
+        match QuoteService::fetch_real_quotes(codes.clone()).await {
+            Ok(mut real_quotes) => {
+                println!("实时价格获取成功，共{}只股票", real_quotes.len());
+                println!("🔍 获取到的价格数据映射:");
+                for (code, quote) in &real_quotes {
+                    println!("   {} => {} (¥{})", code, quote.name, quote.real_price);
+                }
+
+                // 检查是否所有股票都有价格
+                if real_quotes.len() == codes.len() {
+                    println!("✅ 所有股票价格获取成功");
+                    real_quotes
+                } else {
+                    println!("⚠️  部分股票价格获取失败");
+                    println!("   预期: {}只，实际: {}只", codes.len(), real_quotes.len());
+
+                    // 只为失败的股票生成模拟数据
+                    let failed_codes: Vec<String> = codes.iter()
+                        .filter(|code| !real_quotes.contains_key(*code))
+                        .cloned()
+                        .collect();
+
+                    println!("   失败的股票代码:");
+                    for code in &failed_codes {
+                        println!("     - {}", code);
+                    }
+
+                    // 为失败的股票生成模拟数据
+                    let mock_quotes = QuoteService::mock_quotes(failed_codes);
+
+                    // 合并真实数据和模拟数据（保留真实数据优先）
+                    for (code, mock_quote) in mock_quotes {
+                        if !real_quotes.contains_key(&code) {
+                            println!("   🔧 为 {} 添加模拟数据", code);
+                            real_quotes.insert(code, mock_quote);
+                        }
+                    }
+
+                    real_quotes
+                }
+            }
+            Err(e) => {
+                println!("❌ 实时价格获取失败: {}，降级到模拟数据", e);
+                QuoteService::mock_quotes(codes)
+            }
+        }
     };
 
     // 聚合计算
     let result = PortfolioService::aggregate_positions(positions, &quotes)?;
+
+    println!("📊 聚合后的投资组合数据:");
+    for portfolio in &result {
+        println!("  投资组合: {}", portfolio.portfolio);
+        for target in &portfolio.target_profit_losses {
+            println!("    股票: {} {} (当前价: ¥{})", target.code, target.name, target.real_price);
+        }
+    }
 
     Ok(result)
 }

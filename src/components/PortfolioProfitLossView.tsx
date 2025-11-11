@@ -31,8 +31,18 @@ export default function PortfolioProfitLossView() {
       setError(null);
       console.log("开始加载投资组合盈亏视图...");
 
-      // 使用模拟数据（useMock = true）
-      const data = await db.getPortfolioProfitLossView(true);
+      // 先尝试实时价格，失败时自动使用模拟数据
+      let data;
+      try {
+        console.log("尝试获取实时价格...");
+        data = await db.getPortfolioProfitLossView(false);
+        console.log("实时价格获取成功");
+      } catch (error) {
+        console.warn("实时价格获取失败，使用模拟数据:", error);
+        // 降级到模拟数据
+        data = await db.getPortfolioProfitLossView(true);
+        console.log("模拟数据加载成功");
+      }
       console.log("API返回的数据:", data);
       console.log("数据类型:", typeof data);
       console.log("是否为数组:", Array.isArray(data));

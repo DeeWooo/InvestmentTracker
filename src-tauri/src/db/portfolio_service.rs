@@ -53,13 +53,20 @@ impl PortfolioService {
             let mut target_losses = Vec::new();
 
             for (code, positions_by_code) in code_map {
+                println!("🔍 尝试获取股票 '{}' 的价格数据", code);
+                println!("   - quotes HashMap 的所有 keys: {:?}", quotes.keys().collect::<Vec<_>>());
+
                 if let Some(quote) = quotes.get(&code) {
+                    println!("   ✅ 在 HashMap 中找到了价格数据");
                     let target = Self::create_target_profit_loss(
                         &code,
                         quote,
                         positions_by_code,
                     )?;
                     target_losses.push(target);
+                } else {
+                    println!("   ❌ 在 HashMap 中没有找到 '{}' 的价格数据！", code);
+                    println!("   ⚠️  这支股票将被跳过，不会出现在最终结果中");
                 }
             }
 
@@ -87,6 +94,11 @@ impl PortfolioService {
         quote: &RealQuote,
         positions: Vec<Position>,
     ) -> Result<TargetProfitLoss> {
+        println!("📊 聚合股票 {} 的持仓数据:", code);
+        println!("   - 股票名称: {}", quote.name);
+        println!("   - 实时价格: {}", quote.real_price);
+        println!("   - 持仓笔数: {}", positions.len());
+
         // 将Position转换为PositionProfitLoss
         let mut position_losses = Vec::new();
         let mut total_cost = 0.0;
@@ -140,7 +152,7 @@ impl PortfolioService {
         let recommended_buy_in_point = last_buy_price * 0.9;
         let recommended_sale_out_point = last_buy_price * 1.1;
 
-        Ok(TargetProfitLoss {
+        let result = TargetProfitLoss {
             code: code.to_string(),
             name: quote.name.clone(),
             real_price: quote.real_price,
@@ -151,7 +163,14 @@ impl PortfolioService {
             target_profit_loss_rate,
             recommended_buy_in_point,
             recommended_sale_out_point,
-        })
+        };
+
+        println!("   - 聚合结果:");
+        println!("     • 当前价格: {}", result.real_price);
+        println!("     • 总盈亏: {}", result.target_profit_loss);
+        println!("     • 盈亏比: {:.2}%", result.target_profit_loss_rate * 100.0);
+
+        Ok(result)
     }
 
     /// 为投资组合创建PortfolioProfitLoss
