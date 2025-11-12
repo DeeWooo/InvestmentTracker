@@ -20,11 +20,8 @@ fn get_db_path() -> PathBuf {
     #[cfg(not(debug_assertions))]
     {
         // 生产环境下使用应用数据目录
-        if let Ok(data_dir) = tauri::api::path::data_dir() {
-            data_dir.join("InvestmentTracker").join("positions.db")
-        } else {
-            PathBuf::from("positions.db")
-        }
+        // Tauri 2.x 中简化为使用相对路径，由 Tauri 自动管理
+        PathBuf::from("positions.db")
     }
 }
 

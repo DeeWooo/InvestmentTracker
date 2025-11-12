@@ -3,7 +3,7 @@
   "build": {
     "beforeDevCommand": "npm run next:dev",
     "beforeBuildCommand": "npm run next:build",
-    "frontendDist": "./out",
+    "frontendDist": "../out",
     "devUrl": "http://localhost:3001"
   },
   "identifier": "com.deewooo.investmenttracker",
