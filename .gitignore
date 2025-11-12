@@ -16,6 +16,7 @@ src-tauri/target
 # IDE
 .vscode
 .idea
+.cursorrules
 *.swp
 *.swo
 
