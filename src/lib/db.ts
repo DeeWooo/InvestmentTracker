@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Position,
   CreatePositionRequest,
+  ClosePositionRequest,
   PortfolioSummary,
   PositionStats,
   PortfolioProfitLoss
@@ -81,14 +82,19 @@ export const db = {
     }
   },
 
-  // 平仓
-  async closePosition(id: string): Promise<void> {
+  // 平仓（卖出）
+  async closePosition(request: ClosePositionRequest): Promise<void> {
     if (typeof window === "undefined") {
       throw new Error("closePosition can only be called in the browser");
     }
 
     try {
-      await invoke("close_position", { id });
+      await invoke("close_position", { 
+        id: request.id,
+        sellPrice: request.sell_price,
+        sellDate: request.sell_date
+      });
+      console.log("平仓成功:", request);
     } catch (err) {
       console.error("Close position error:", err);
       throw new Error(err instanceof Error ? err.message : "平仓失败");

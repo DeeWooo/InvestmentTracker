@@ -1,6 +1,29 @@
 use rusqlite::{Connection, Result as SqliteResult, params};
 use uuid::Uuid;
 
+/// 数据库迁移管理器
+/// 
+/// 迁移版本历史：
+/// - v0 -> v1: 重构表结构，添加 UUID 主键
+/// - v1 -> v2: 添加 sell_price 和 sell_date 字段
+pub fn run_migrations(conn: &Connection) -> SqliteResult<()> {
+    println!("========================================");
+    println!("🔄 开始执行数据库迁移检查");
+    println!("========================================");
+    
+    // 先运行 v0 -> v1 迁移
+    migrate_v0_to_v1(conn)?;
+    
+    // 再运行 v1 -> v2 迁移
+    migrate_v1_to_v2(conn)?;
+    
+    println!("========================================");
+    println!("✅ 所有迁移检查完成");
+    println!("========================================");
+    
+    Ok(())
+}
+
 /// 数据库迁移：从旧版本 (v0) 升级到新版本 (v1)
 ///
 /// 变更内容：
@@ -140,6 +163,51 @@ fn check_if_migrated(conn: &Connection) -> SqliteResult<bool> {
     let has_id_column = rows.into_iter().any(|col| col.as_deref() == Ok("id"));
 
     Ok(has_id_column)
+}
+
+/// 数据库迁移：从 v1 升级到 v2
+///
+/// 变更内容：
+/// - 添加 sell_price 字段：卖出价格
+/// - 添加 sell_date 字段：卖出日期
+///
+/// 这两个字段用于记录卖出操作的详细信息，支持计算实际盈亏
+pub fn migrate_v1_to_v2(conn: &Connection) -> SqliteResult<()> {
+    println!("[迁移] 检查是否需要 v1 -> v2 迁移");
+
+    // 检查是否已经有 sell_price 字段
+    let mut stmt = conn.prepare("PRAGMA table_info(positions)")?;
+    let columns: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let has_sell_price = columns.iter().any(|col| col == "sell_price");
+    let has_sell_date = columns.iter().any(|col| col == "sell_date");
+
+    if has_sell_price && has_sell_date {
+        println!("[迁移] 数据库已经是 v2，跳过迁移");
+        return Ok(());
+    }
+
+    println!("[迁移] 开始 v1 -> v2 迁移...");
+
+    // 添加 sell_price 字段
+    if !has_sell_price {
+        println!("[迁移] 添加 sell_price 字段");
+        conn.execute("ALTER TABLE positions ADD COLUMN sell_price REAL", [])?;
+        println!("[迁移] ✓ sell_price 字段添加成功");
+    }
+
+    // 添加 sell_date 字段
+    if !has_sell_date {
+        println!("[迁移] 添加 sell_date 字段");
+        conn.execute("ALTER TABLE positions ADD COLUMN sell_date TEXT", [])?;
+        println!("[迁移] ✓ sell_date 字段添加成功");
+    }
+
+    println!("[迁移] ✓ v1 -> v2 迁移完成");
+
+    Ok(())
 }
 
 #[cfg(test)]

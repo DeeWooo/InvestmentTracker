@@ -45,10 +45,10 @@ fn init_db() -> Result<Connection, String> {
 
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
 
-    // 执行数据库迁移（从旧版本到新版本）
-    migration::migrate_v0_to_v1(&conn).map_err(|e| e.to_string())?;
+    // 执行所有数据库迁移（自动处理版本升级）
+    migration::run_migrations(&conn).map_err(|e| e.to_string())?;
 
-    // 如果是全新数据库，创建新表结构
+    // 如果是全新数据库，创建新表结构（包含新字段）
     conn.execute(
         "CREATE TABLE IF NOT EXISTS positions (
             id TEXT PRIMARY KEY,
@@ -58,7 +58,9 @@ fn init_db() -> Result<Connection, String> {
             buy_date TEXT NOT NULL,
             quantity INTEGER NOT NULL,
             status TEXT NOT NULL DEFAULT 'POSITION',
-            portfolio TEXT
+            portfolio TEXT,
+            sell_price REAL,
+            sell_date TEXT
         )",
         [],
     ).map_err(|e| e.to_string())?;

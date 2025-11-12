@@ -14,29 +14,39 @@ export default function HomePage() {
   const [portfolios, setPortfolios] = useState<PortfolioProfitLoss[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // 从后端获取完整的投资组合盈亏数据（包含实时价格）
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        // 使用模拟数据模式获取盈亏视图
-        const data = await db.getPortfolioProfitLossView(true);
-        setPortfolios(data);
-      } catch (err) {
-        console.error('Error fetching portfolio data:', err);
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      // 使用模拟数据模式获取盈亏视图
+      const data = await db.getPortfolioProfitLossView(true);
+      setPortfolios(data);
+      console.log('📊 主页数据已刷新，持仓组合数:', data.length);
+    } catch (err) {
+      console.error('Error fetching portfolio data:', err);
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
     
     // 每60秒刷新一次数据
     const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshTrigger]); // 依赖 refreshTrigger，当它变化时重新获取数据
+  
+  // 当切换回主页相关 tab 时刷新数据
+  useEffect(() => {
+    if (activeTab === 'positions' || activeTab === 'portfolio' || activeTab === 'profitloss') {
+      console.log('🔄 Tab 切换，刷新主页数据');
+      fetchData();
+    }
+  }, [activeTab]);
 
   // 计算所有投资组合的总成本
   const totalAssets = portfolios
@@ -91,6 +101,15 @@ export default function HomePage() {
                   {portfolios.length} 个投资组合
                 </p>
               )}
+              <button
+                onClick={() => {
+                  console.log('🔄 手动刷新数据');
+                  fetchData();
+                }}
+                className="text-xs text-blue-500 hover:text-blue-700 underline mt-1"
+              >
+                刷新数据
+              </button>
             </div>
           )}
         </div>

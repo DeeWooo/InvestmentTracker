@@ -1,12 +1,12 @@
 /// 持仓相关的 Tauri 命令
 /// 处理前端调用，调用数据访问层
 
-use crate::{not_found, error::{AppError, Result}};
+use crate::{not_found, invalid_input, error::{AppError, Result}};
 use crate::db::position_repo::PositionRepository;
 use crate::db::{QuoteService, PortfolioService};
 use crate::models::position::{Position, CreatePositionRequest, PortfolioSummary};
 use crate::models::{PortfolioProfitLoss};
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 use std::path::PathBuf;
 
 /// 获取数据库路径
@@ -124,9 +124,18 @@ pub async fn get_codes_in_position() -> Result<Vec<String>> {
     Ok(codes)
 }
 
-/// 平仓操作（更新状态为 CLOSE）
+/// 平仓操作（更新状态为 CLOSE，并记录卖出信息）
+/// 
+/// 参数：
+/// - id: 持仓记录ID
+/// - sell_price: 卖出价格
+/// - sell_date: 卖出日期 (YYYY-MM-DD)
 #[tauri::command]
-pub async fn close_position(id: String) -> Result<()> {
+pub async fn close_position(
+    id: String,
+    sell_price: f64,
+    sell_date: String,
+) -> Result<()> {
     let conn = get_db_connection()?;
 
     // 检查记录是否存在
@@ -134,8 +143,18 @@ pub async fn close_position(id: String) -> Result<()> {
         return Err(not_found!("找不到 ID 为 {} 的持仓记录", id));
     }
 
-    // 执行平仓
-    PositionRepository::close_position(&conn, &id)?;
+    // 验证参数
+    if sell_price <= 0.0 {
+        return Err(invalid_input!("卖出价格必须大于0"));
+    }
+
+    // 执行平仓并记录卖出信息
+    conn.execute(
+        "UPDATE positions SET status = 'CLOSE', sell_price = ?, sell_date = ? WHERE id = ?",
+        params![sell_price, sell_date, id],
+    )?;
+
+    println!("✅ 平仓成功：ID={}, 卖出价=¥{}, 日期={}", id, sell_price, sell_date);
 
     Ok(())
 }

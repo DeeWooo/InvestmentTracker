@@ -40,19 +40,8 @@ export function usePositions() {
     }
   };
 
-  const closePosition = async (id: string) => {
-    try {
-      console.log('closePosition called with id:', id);
-      console.log('Calling db.closePosition...');
-      await db.closePosition(id);
-      console.log('Close position successful');
-      await fetchPositions();
-    } catch (err) {
-      console.error('closePosition error:', err);
-      setError(err instanceof Error ? err.message : "平仓失败");
-      throw err; // 抛出错误以便调用者处理
-    }
-  };
+  // 注意：closePosition 现在需要卖出价格和日期，不再在这里提供
+  // 请直接使用 db.closePosition(request) 并传入完整的 ClosePositionRequest
 
   // 部分平仓功能暂未实现
   // const partialClose = async (_code: string, _quantity: number) => {
@@ -97,7 +86,6 @@ export function usePositions() {
     isLoading,
     error,
     deletePosition,
-    closePosition,
     refreshPositions: fetchPositions,
     buyPosition,
   };

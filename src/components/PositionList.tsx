@@ -14,15 +14,18 @@ import { usePositions } from '@/hooks/usePositions';
 import { Spinner } from '@/components/ui/spinner';
 import { BuyPositionForm } from './BuyPositionForm';
 import { ConfirmDialog } from './ConfirmDialog';
-import { CreatePositionRequest, PositionProfitLoss } from '@/lib/types';
+import { SellPositionForm } from './SellPositionForm';
+import { CreatePositionRequest, ClosePositionRequest, Position, PositionProfitLoss } from '@/lib/types';
 import { db } from '@/lib/db';
 
 export default function PositionList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [positionPnLMap, setPositionPnLMap] = useState<Map<string, PositionProfitLoss>>(new Map());
+  
+  // 删除确认对话框
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
-    type: 'close' | 'delete' | null;
+    type: 'delete' | null;
     positionId: string | null;
   }>({
     open: false,
@@ -30,12 +33,20 @@ export default function PositionList() {
     positionId: null,
   });
 
+  // 卖出表单对话框
+  const [sellDialog, setSellDialog] = useState<{
+    open: boolean;
+    position: Position | null;
+  }>({
+    open: false,
+    position: null,
+  });
+
   const {
     positions,
     isLoading,
     error: positionsError,
     deletePosition,
-    closePosition,
     buyPosition,
     refreshPositions
   } = usePositions();
@@ -97,13 +108,22 @@ export default function PositionList() {
     }
   }, [positions, isLoading]);
 
-  // 打开平仓确认对话框
-  const handleClosePosition = (id: string) => {
-    console.log('handleClosePosition called with id:', id);
-    setConfirmDialog({
+  // 打开卖出表单对话框
+  const handleOpenSellDialog = (position: Position) => {
+    console.log('Opening sell dialog for position:', position);
+    
+    // 获取该持仓的实时价格
+    const pnlData = positionPnLMap.get(position.id);
+    
+    // 将当前价格附加到 position 对象
+    const positionWithPrice = {
+      ...position,
+      current_price: pnlData?.real_price || undefined
+    };
+    
+    setSellDialog({
       open: true,
-      type: 'close',
-      positionId: id,
+      position: positionWithPrice,
     });
   };
 
@@ -117,15 +137,32 @@ export default function PositionList() {
     });
   };
 
-  // 确认对话框的确认按钮处理
+  // 处理卖出
+  const handleSell = async (data: ClosePositionRequest) => {
+    try {
+      console.log('Selling position:', data);
+      await db.closePosition(data);
+      
+      // 关闭对话框
+      setSellDialog({ open: false, position: null });
+      
+      // 刷新列表
+      await refreshPositions();
+      
+      alert('卖出成功！');
+    } catch (err) {
+      console.error('Failed to sell position:', err);
+      alert('卖出失败: ' + (err instanceof Error ? err.message : '未知错误'));
+      throw err; // 让表单知道失败了
+    }
+  };
+
+  // 删除确认对话框的确认按钮处理
   const handleConfirm = async () => {
     if (!confirmDialog.positionId) return;
 
     try {
-      if (confirmDialog.type === 'close') {
-        console.log('Executing close position for:', confirmDialog.positionId);
-        await closePosition(confirmDialog.positionId);
-      } else if (confirmDialog.type === 'delete') {
+      if (confirmDialog.type === 'delete') {
         console.log('Executing delete position for:', confirmDialog.positionId);
         await deletePosition(confirmDialog.positionId);
       }
@@ -302,16 +339,8 @@ export default function PositionList() {
                 <TableCell><div className="flex gap-2"><Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleClosePosition(position.id)}
+                    onClick={() => handleOpenSellDialog(position)}
                   ><ArrowDownLeft className="h-4 w-4 mr-1" />平仓</Button><Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    title="部分卖出功能尚在开发中"
-                    onClick={() => {
-                      alert('部分卖出功能暂未实现');
-                    }}
-                  ><ArrowDown className="h-4 w-4 mr-1" />部分卖出</Button><Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeletePosition(position.id)}
@@ -322,29 +351,29 @@ export default function PositionList() {
         </TableBody>
       </Table>
 
+      {/* 删除确认对话框 */}
       <ConfirmDialog
         open={confirmDialog.open}
-        title={
-          confirmDialog.type === 'close'
-            ? '确认平仓'
-            : confirmDialog.type === 'delete'
-            ? '确认删除'
-            : ''
-        }
-        description={
-          confirmDialog.type === 'close'
-            ? '确认要平仓此持仓吗？平仓后该持仓将被标记为已平仓状态。'
-            : confirmDialog.type === 'delete'
-            ? '确认要删除此持仓记录吗？该操作无法撤销。'
-            : ''
-        }
-        confirmText={
-          confirmDialog.type === 'close' ? '平仓' : confirmDialog.type === 'delete' ? '删除' : '确认'
-        }
-        isDangerous={confirmDialog.type === 'delete'}
+        title="确认删除"
+        description="确认要删除此持仓记录吗？该操作无法撤销。"
+        confirmText="删除"
+        isDangerous={true}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
+
+      {/* 卖出表单对话框 */}
+      {sellDialog.open && sellDialog.position && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <SellPositionForm
+              position={sellDialog.position}
+              onSell={handleSell}
+              onCancel={() => setSellDialog({ open: false, position: null })}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 } 

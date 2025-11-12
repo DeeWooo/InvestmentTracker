@@ -16,6 +16,9 @@ export interface Position {
   quantity: number;         // 买入数量
   status: string;           // 状态：POSITION 或 CLOSE
   portfolio: string;        // 所属投资组合
+  sell_price?: number;      // 卖出价格（可选，仅 status=CLOSE 时有值）
+  sell_date?: string;       // 卖出日期（可选，仅 status=CLOSE 时有值）
+  current_price?: number;   // 当前价格（前端附加，用于显示）
 }
 
 // 创建持仓记录请求参数
@@ -26,6 +29,13 @@ export interface CreatePositionRequest {
   buy_date: string;         // 买入日期 (YYYY-MM-DD)
   quantity: number;         // 买入数量
   portfolio: string;        // 所属投资组合
+}
+
+// 卖出/平仓请求参数
+export interface ClosePositionRequest {
+  id: string;               // 持仓记录ID
+  sell_price: number;       // 卖出价格
+  sell_date: string;        // 卖出日期 (YYYY-MM-DD)
 }
 
 // 持仓统计信息
