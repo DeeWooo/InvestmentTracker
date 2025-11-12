@@ -48,11 +48,11 @@ export default function PositionList() {
     isArray: Array.isArray(positions),
   });
 
-  // 获取盈亏颜色样式(>0红色盈利,<0绿色亏损,=0默认颜色)
-  const getPnLStyle = (value: number) => {
-    if (value > 0) return "text-red-600 font-semibold";
-    if (value < 0) return "text-green-600 font-semibold";
-    return "text-gray-800";
+  // 获取盈亏比样式(盈亏比>10%时加粗)
+  const getPnLRateStyle = (rate: number) => {
+    const baseStyle = rate > 0 ? "text-red-600" : rate < 0 ? "text-green-600" : "text-gray-800";
+    const isBold = Math.abs(rate) > 0.1; // 10%
+    return isBold ? `${baseStyle} font-semibold` : baseStyle;
   };
 
   // 格式化货币
@@ -63,6 +63,11 @@ export default function PositionList() {
   // 格式化百分比
   const formatPercentage = (value: number) => {
     return `${(value * 100).toFixed(2)}%`;
+  };
+
+  // 格式化日期(只显示年月日)
+  const formatDate = (dateString: string) => {
+    return dateString.split('T')[0]; // 只取日期部分(处理ISO格式)
   };
 
   // 加载盈亏数据
@@ -281,18 +286,18 @@ export default function PositionList() {
               <TableRow key={position.id}>
                 <TableCell>{position.code}</TableCell>
                 <TableCell>{position.name}</TableCell>
-                <TableCell className={pnlData ? getPnLStyle(pnlData.profit_loss) : ''}>
+                <TableCell className={pnlData ? getPnLRateStyle(pnlData.profit_loss_rate) : ''}>
                   {pnlData ? formatCurrency(pnlData.profit_loss) : '待计算'}
                 </TableCell>
-                <TableCell className={pnlData ? getPnLStyle(pnlData.profit_loss) : ''}>
+                <TableCell className={pnlData ? getPnLRateStyle(pnlData.profit_loss_rate) : ''}>
                   {pnlData ? formatPercentage(pnlData.profit_loss_rate) : '待计算'}
                 </TableCell>
                 <TableCell>{position.quantity}</TableCell>
-                <TableCell>{pnlData ? formatCurrency(pnlData.real_price) : '待获取'}</TableCell>
+                <TableCell className="text-amber-500">{pnlData ? formatCurrency(pnlData.real_price) : '待获取'}</TableCell>
                 <TableCell>{position.buy_price.toFixed(4)}</TableCell>
                 <TableCell>{(position.buy_price * 1.1).toFixed(4)}</TableCell>
                 <TableCell>{(position.buy_price * 1.2).toFixed(4)}</TableCell>
-                <TableCell>{position.buy_date}</TableCell>
+                <TableCell>{formatDate(position.buy_date)}</TableCell>
                 <TableCell>{position.portfolio}</TableCell>
                 <TableCell><div className="flex gap-2"><Button
                     variant="outline"
