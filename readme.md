@@ -21,6 +21,18 @@
 
 ---
 
+## 📸 应用预览
+
+<div align="center">
+
+![盈亏分析视图](./docs/screenshots/profit-loss-view.png)
+
+*完整的投资分析仪表板 - 组合级统计、股票级分析、交易明细一目了然*
+
+</div>
+
+---
+
 ## 📖 项目简介
 
 InvestmentTracker 是一个基于 **Tauri + Next.js + Rust** 构建的现代化投资组合管理系统。它提供了一个轻量级的桌面应用，让投资者能够：
