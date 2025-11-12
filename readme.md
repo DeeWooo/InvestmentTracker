@@ -185,10 +185,9 @@ InvestmentTracker/
 │
 ├── 📂 docs/                         # 项目文档
 │   ├── project-structure.md         # 详细项目结构说明
-│   ├── migration-plan.md            # Java 版本迁移计划
-│   ├── gap-analysis.md              # 功能差距分析
 │   ├── storage-design.md            # 数据存储设计
-│   └── code-review.md               # 代码审查建议
+│   ├── code-review.md               # 代码审查建议
+│   └── screenshots/                 # 应用截图
 │
 ├── package.json                     # Node.js 项目配置
 ├── tsconfig.json                    # TypeScript 配置
@@ -277,8 +276,6 @@ PortfolioProfitLoss {
 | 文档 | 内容 |
 |------|------|
 | **[项目结构](./docs/project-structure.md)** | 详细的目录和文件说明 |
-| **[迁移计划](./docs/migration-plan.md)** ⭐ | Java 版本完整迁移计划 |
-| **[功能差距分析](./docs/gap-analysis.md)** | 与 Java 版本的对比 |
 | **[存储方案设计](./docs/storage-design.md)** | 数据库架构和 API 设计 |
 | **[代码审查](./docs/code-review.md)** | 优化建议和最佳实践 |
 
