@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import PositionList from './PositionList';
 import Portfolio from './Portfolio';
@@ -47,6 +47,12 @@ export default function HomePage() {
       fetchData();
     }
   }, [activeTab]);
+
+  // 数据变化回调（传递给子组件）
+  const handleDataChange = useCallback(() => {
+    console.log('🔄 子组件数据变化，立即刷新主页数据');
+    fetchData();
+  }, []);
 
   // 计算所有投资组合的总成本
   const totalAssets = portfolios
@@ -141,7 +147,7 @@ export default function HomePage() {
 
       {/* 主内容区 */}
       <div className="flex-1 p-6 overflow-y-auto">
-        {activeTab === 'positions' && <PositionList />}
+        {activeTab === 'positions' && <PositionList onDataChange={handleDataChange} />}
         {activeTab === 'portfolio' && <Portfolio />}
         {activeTab === 'profitloss' && <PortfolioProfitLossView />}
       </div>

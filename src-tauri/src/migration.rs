@@ -6,6 +6,7 @@ use uuid::Uuid;
 /// 迁移版本历史：
 /// - v0 -> v1: 重构表结构，添加 UUID 主键
 /// - v1 -> v2: 添加 sell_price 和 sell_date 字段
+/// - v2 -> v3: 添加 parent_id 字段（支持减仓功能）
 pub fn run_migrations(conn: &Connection) -> SqliteResult<()> {
     println!("========================================");
     println!("🔄 开始执行数据库迁移检查");
@@ -16,6 +17,9 @@ pub fn run_migrations(conn: &Connection) -> SqliteResult<()> {
     
     // 再运行 v1 -> v2 迁移
     migrate_v1_to_v2(conn)?;
+    
+    // 运行 v2 -> v3 迁移
+    migrate_v2_to_v3(conn)?;
     
     println!("========================================");
     println!("✅ 所有迁移检查完成");
@@ -206,6 +210,47 @@ pub fn migrate_v1_to_v2(conn: &Connection) -> SqliteResult<()> {
     }
 
     println!("[迁移] ✓ v1 -> v2 迁移完成");
+
+    Ok(())
+}
+
+/// 数据库迁移：从 v2 升级到 v3
+///
+/// 变更内容：
+/// - 添加 parent_id 字段：用于记录减仓时的持仓关联关系
+///
+/// 使用场景：
+/// - 原始买入：parent_id = NULL
+/// - 减仓卖出：parent_id = 原持仓的 id
+pub fn migrate_v2_to_v3(conn: &Connection) -> SqliteResult<()> {
+    println!("[迁移] 检查是否需要 v2 -> v3 迁移");
+
+    // 检查是否已经有 parent_id 字段
+    let mut stmt = conn.prepare("PRAGMA table_info(positions)")?;
+    let columns: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let has_parent_id = columns.iter().any(|col| col == "parent_id");
+
+    if has_parent_id {
+        println!("[迁移] 数据库已经是 v3，跳过迁移");
+        return Ok(());
+    }
+
+    println!("[迁移] 开始 v2 -> v3 迁移...");
+
+    // 添加 parent_id 字段
+    println!("[迁移] 添加 parent_id 字段");
+    conn.execute("ALTER TABLE positions ADD COLUMN parent_id TEXT", [])?;
+    println!("[迁移] ✓ parent_id 字段添加成功");
+
+    // 为新字段创建索引，提升查询性能
+    println!("[迁移] 创建 parent_id 索引");
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_parent_id ON positions(parent_id)", [])?;
+    println!("[迁移] ✓ parent_id 索引创建成功");
+
+    println!("[迁移] ✓ v2 -> v3 迁移完成");
 
     Ok(())
 }

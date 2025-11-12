@@ -43,13 +43,13 @@ fn get_db_connection() -> Result<Connection> {
         .map_err(|e| AppError::Database(format!("连接数据库失败: {}", e)))?;
     println!("[DB] 数据库连接成功");
 
-    // 执行数据库迁移（如果需要）
+    // 执行所有数据库迁移（自动处理版本升级）
     println!("[DB] 开始执行迁移...");
-    crate::migration::migrate_v0_to_v1(&conn)
+    crate::migration::run_migrations(&conn)
         .map_err(|e| AppError::Database(format!("数据库迁移失败: {}", e)))?;
     println!("[DB] 迁移完成");
 
-    // 如果是全新数据库，创建表结构
+    // 如果是全新数据库，创建表结构（包含所有最新字段）
     println!("[DB] 创建表结构（如果不存在）...");
     conn.execute(
         "CREATE TABLE IF NOT EXISTS positions (
@@ -60,7 +60,10 @@ fn get_db_connection() -> Result<Connection> {
             buy_date TEXT NOT NULL,
             quantity INTEGER NOT NULL,
             status TEXT NOT NULL DEFAULT 'POSITION',
-            portfolio TEXT
+            portfolio TEXT,
+            sell_price REAL,
+            sell_date TEXT,
+            parent_id TEXT
         )",
         [],
     ).map_err(|e| AppError::Database(format!("创建表失败: {}", e)))?;
@@ -71,6 +74,8 @@ fn get_db_connection() -> Result<Connection> {
     conn.execute("CREATE INDEX IF NOT EXISTS idx_code ON positions(code)", [])
         .map_err(|e| AppError::Database(format!("创建索引失败: {}", e)))?;
     conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON positions(status)", [])
+        .map_err(|e| AppError::Database(format!("创建索引失败: {}", e)))?;
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_parent_id ON positions(parent_id)", [])
         .map_err(|e| AppError::Database(format!("创建索引失败: {}", e)))?;
     println!("[DB] 索引创建成功");
 
@@ -155,6 +160,88 @@ pub async fn close_position(
     )?;
 
     println!("✅ 平仓成功：ID={}, 卖出价=¥{}, 日期={}", id, sell_price, sell_date);
+
+    Ok(())
+}
+
+/// 减仓（部分卖出）
+/// 
+/// 操作逻辑：
+/// 1. 验证减仓数量必须小于持有数量（否则应使用平仓）
+/// 2. 创建新的已卖出记录（status=CLOSE，parent_id=原ID）
+/// 3. 更新原持仓记录的数量（quantity 减少）
+#[tauri::command]
+pub async fn reduce_position(
+    id: String,
+    reduce_quantity: i32,
+    sell_price: f64,
+    sell_date: String,
+) -> Result<()> {
+    let conn = get_db_connection()?;
+
+    // 1. 获取原持仓记录
+    let position = PositionRepository::find_by_id(&conn, &id)?
+        .ok_or_else(|| not_found!("找不到 ID 为 {} 的持仓记录", id))?;
+
+    // 2. 验证状态必须是 POSITION
+    if position.status != "POSITION" {
+        return Err(invalid_input!("只能对持仓中的记录进行减仓操作"));
+    }
+
+    // 3. 验证减仓数量
+    if reduce_quantity <= 0 {
+        return Err(invalid_input!("减仓数量必须大于0"));
+    }
+    if reduce_quantity >= position.quantity {
+        return Err(invalid_input!(
+            "减仓数量({})必须小于持有数量({})，如需全部卖出请使用平仓功能",
+            reduce_quantity,
+            position.quantity
+        ));
+    }
+
+    // 4. 验证卖出价格
+    if sell_price <= 0.0 {
+        return Err(invalid_input!("卖出价格必须大于0"));
+    }
+
+    // 5. 生成新记录ID（已卖出部分）
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let sold_id = format!("{}-sold-{}", id, timestamp);
+
+    // 6. 创建已卖出记录（新记录）
+    conn.execute(
+        "INSERT INTO positions (id, code, name, quantity, buy_price, buy_date, status, portfolio, sell_price, sell_date, parent_id)
+         VALUES (?, ?, ?, ?, ?, ?, 'CLOSE', ?, ?, ?, ?)",
+        params![
+            sold_id,
+            position.code,
+            position.name,
+            reduce_quantity,
+            position.buy_price,
+            position.buy_date,
+            position.portfolio,
+            sell_price,
+            sell_date,
+            id, // parent_id 指向原记录
+        ],
+    )?;
+
+    // 7. 更新原持仓数量
+    let remaining_quantity = position.quantity - reduce_quantity;
+    conn.execute(
+        "UPDATE positions SET quantity = ? WHERE id = ?",
+        params![remaining_quantity, id],
+    )?;
+
+    println!(
+        "✅ 减仓成功：ID={}, 卖出{}股@¥{}, 剩余{}股",
+        id, reduce_quantity, sell_price, remaining_quantity
+    );
 
     Ok(())
 }

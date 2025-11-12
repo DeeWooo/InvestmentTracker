@@ -38,6 +38,14 @@ export interface ClosePositionRequest {
   sell_date: string;        // 卖出日期 (YYYY-MM-DD)
 }
 
+// 减仓请求参数
+export interface ReducePositionRequest {
+  id: string;               // 持仓记录ID
+  reduce_quantity: number;  // 减仓数量
+  sell_price: number;       // 卖出价格
+  sell_date: string;        // 卖出日期 (YYYY-MM-DD)
+}
+
 // 持仓统计信息
 export interface PositionStats {
   code: string;             // 股票代码

@@ -8,17 +8,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useState, useEffect } from 'react';
-import { Trash2, ArrowDownLeft, ArrowDown } from 'lucide-react';
+import { Trash2, ArrowDownLeft, ArrowDown, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePositions } from '@/hooks/usePositions';
 import { Spinner } from '@/components/ui/spinner';
 import { BuyPositionForm } from './BuyPositionForm';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SellPositionForm } from './SellPositionForm';
-import { CreatePositionRequest, ClosePositionRequest, Position, PositionProfitLoss } from '@/lib/types';
+import { ReducePositionForm } from './ReducePositionForm';
+import { CreatePositionRequest, ClosePositionRequest, ReducePositionRequest, Position, PositionProfitLoss } from '@/lib/types';
 import { db } from '@/lib/db';
 
-export default function PositionList() {
+interface PositionListProps {
+  onDataChange?: () => void;
+}
+
+export default function PositionList({ onDataChange }: PositionListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [positionPnLMap, setPositionPnLMap] = useState<Map<string, PositionProfitLoss>>(new Map());
   
@@ -35,6 +40,15 @@ export default function PositionList() {
 
   // 卖出表单对话框
   const [sellDialog, setSellDialog] = useState<{
+    open: boolean;
+    position: Position | null;
+  }>({
+    open: false,
+    position: null,
+  });
+
+  // 减仓表单对话框
+  const [reduceDialog, setReduceDialog] = useState<{
     open: boolean;
     position: Position | null;
   }>({
@@ -149,10 +163,55 @@ export default function PositionList() {
       // 刷新列表
       await refreshPositions();
       
+      // 通知父组件数据变化
+      onDataChange?.();
+      
       alert('卖出成功！');
     } catch (err) {
       console.error('Failed to sell position:', err);
       alert('卖出失败: ' + (err instanceof Error ? err.message : '未知错误'));
+      throw err; // 让表单知道失败了
+    }
+  };
+
+  // 打开减仓对话框
+  const handleOpenReduceDialog = (position: Position) => {
+    console.log('Opening reduce dialog for position:', position);
+    
+    // 获取该持仓的实时价格
+    const pnlData = positionPnLMap.get(position.id);
+    
+    // 将当前价格附加到 position 对象
+    const positionWithPrice = {
+      ...position,
+      current_price: pnlData?.real_price || undefined
+    };
+    
+    setReduceDialog({
+      open: true,
+      position: positionWithPrice,
+    });
+  };
+
+  // 减仓操作
+  const handleReduce = async (data: ReducePositionRequest) => {
+    try {
+      console.log('Reducing position:', data);
+      await db.reducePosition(data);
+      
+      // 关闭对话框
+      setReduceDialog({ open: false, position: null });
+      
+      // 刷新列表
+      await refreshPositions();
+      
+      // 通知父组件数据变化
+      onDataChange?.();
+      
+      alert('减仓成功！');
+    } catch (err) {
+      console.error('Failed to reduce position:', err);
+      alert('减仓失败: ' + (err instanceof Error ? err.message : '未知错误'));
       throw err; // 让表单知道失败了
     }
   };
@@ -165,6 +224,9 @@ export default function PositionList() {
       if (confirmDialog.type === 'delete') {
         console.log('Executing delete position for:', confirmDialog.positionId);
         await deletePosition(confirmDialog.positionId);
+        
+        // 通知父组件数据变化
+        onDataChange?.();
       }
     } catch (err) {
       console.error('Failed to execute action:', err);
@@ -191,6 +253,9 @@ export default function PositionList() {
       // 立即重新获取最新数据
       console.log('Refreshing positions after buy...');
       await refreshPositions();
+      
+      // 通知父组件数据变化
+      onDataChange?.();
       
       // 添加成功提示
       alert('持仓添加成功！');
@@ -343,6 +408,10 @@ export default function PositionList() {
                   ><ArrowDownLeft className="h-4 w-4 mr-1" />平仓</Button><Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleOpenReduceDialog(position)}
+                  ><TrendingDown className="h-4 w-4 mr-1" />减仓</Button><Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDeletePosition(position.id)}
                   ><Trash2 className="h-4 w-4 mr-1" />删除</Button></div></TableCell>
               </TableRow>
@@ -370,6 +439,19 @@ export default function PositionList() {
               position={sellDialog.position}
               onSell={handleSell}
               onCancel={() => setSellDialog({ open: false, position: null })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 减仓表单对话框 */}
+      {reduceDialog.open && reduceDialog.position && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <ReducePositionForm
+              position={reduceDialog.position}
+              onReduce={handleReduce}
+              onCancel={() => setReduceDialog({ open: false, position: null })}
             />
           </div>
         </div>

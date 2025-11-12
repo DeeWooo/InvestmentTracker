@@ -3,6 +3,7 @@ import {
   Position,
   CreatePositionRequest,
   ClosePositionRequest,
+  ReducePositionRequest,
   PortfolioSummary,
   PositionStats,
   PortfolioProfitLoss
@@ -98,6 +99,26 @@ export const db = {
     } catch (err) {
       console.error("Close position error:", err);
       throw new Error(err instanceof Error ? err.message : "平仓失败");
+    }
+  },
+
+  // 减仓（部分卖出）
+  async reducePosition(request: ReducePositionRequest): Promise<void> {
+    if (typeof window === "undefined") {
+      throw new Error("reducePosition can only be called in the browser");
+    }
+
+    try {
+      await invoke("reduce_position", { 
+        id: request.id,
+        reduceQuantity: request.reduce_quantity,
+        sellPrice: request.sell_price,
+        sellDate: request.sell_date
+      });
+      console.log("减仓成功:", request);
+    } catch (err) {
+      console.error("Reduce position error:", err);
+      throw new Error(err instanceof Error ? err.message : "减仓失败");
     }
   },
 

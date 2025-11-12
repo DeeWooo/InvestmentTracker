@@ -48,7 +48,7 @@ fn init_db() -> Result<Connection, String> {
     // 执行所有数据库迁移（自动处理版本升级）
     migration::run_migrations(&conn).map_err(|e| e.to_string())?;
 
-    // 如果是全新数据库，创建新表结构（包含新字段）
+    // 如果是全新数据库，创建新表结构（包含所有最新字段）
     conn.execute(
         "CREATE TABLE IF NOT EXISTS positions (
             id TEXT PRIMARY KEY,
@@ -60,7 +60,8 @@ fn init_db() -> Result<Connection, String> {
             status TEXT NOT NULL DEFAULT 'POSITION',
             portfolio TEXT,
             sell_price REAL,
-            sell_date TEXT
+            sell_date TEXT,
+            parent_id TEXT
         )",
         [],
     ).map_err(|e| e.to_string())?;
@@ -69,6 +70,8 @@ fn init_db() -> Result<Connection, String> {
     conn.execute("CREATE INDEX IF NOT EXISTS idx_code ON positions(code)", [])
         .map_err(|e| e.to_string())?;
     conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON positions(status)", [])
+        .map_err(|e| e.to_string())?;
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_parent_id ON positions(parent_id)", [])
         .map_err(|e| e.to_string())?;
 
     Ok(conn)
@@ -83,6 +86,7 @@ fn main() {
             commands::position::get_position_records,
             commands::position::get_codes_in_position,
             commands::position::close_position,
+            commands::position::reduce_position,
             commands::position::delete_position,
             commands::position::get_position_stats,
             commands::position::get_portfolio_summary,
