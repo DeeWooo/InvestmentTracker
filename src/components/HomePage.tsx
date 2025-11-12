@@ -14,7 +14,6 @@ export default function HomePage() {
   const [portfolios, setPortfolios] = useState<PortfolioProfitLoss[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // 从后端获取完整的投资组合盈亏数据（包含实时价格）
   const fetchData = async () => {
@@ -38,7 +37,7 @@ export default function HomePage() {
     // 每60秒刷新一次数据
     const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
-  }, [refreshTrigger]); // 依赖 refreshTrigger，当它变化时重新获取数据
+  }, []); // 只在组件挂载时执行一次
   
   // 当切换回主页相关 tab 时刷新数据
   useEffect(() => {

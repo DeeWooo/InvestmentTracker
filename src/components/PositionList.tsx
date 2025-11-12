@@ -8,7 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useState, useEffect } from 'react';
-import { Trash2, ArrowDownLeft, ArrowDown, TrendingDown } from 'lucide-react';
+import { Trash2, ArrowDownLeft, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePositions } from '@/hooks/usePositions';
 import { Spinner } from '@/components/ui/spinner';
