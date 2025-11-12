@@ -1,52 +1,55 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import PositionList from './PositionList';
 import Portfolio from './Portfolio';
 import PortfolioProfitLossView from './PortfolioProfitLossView';
+import { Spinner } from '@/components/ui/spinner';
+import { db } from '@/lib/db';
+import { PortfolioProfitLoss } from '@/lib/types';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('positions');
+  const [portfolios, setPortfolios] = useState<PortfolioProfitLoss[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  // 从后端获取完整的投资组合盈亏数据（包含实时价格）
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        // 使用模拟数据模式获取盈亏视图
+        const data = await db.getPortfolioProfitLossView(true);
+        setPortfolios(data);
+      } catch (err) {
+        console.error('Error fetching portfolio data:', err);
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const portfolio = {
-    name: "白马成长策略",
-    totalCost: 73470.0,
-    maxSinglePosition: 50000,
-    totalPnl: -33879.0,
-    totalPnlPercentage: -0.461127,
-    totalValue: 73470.0 - 33879.0,
-    positions: [
-      {
-        code: "sz000408",
-        name: "藏格矿业(000408)",
-        currentPrice: 32.24,
-        currentPosition: 0.12896,
-        costPosition: 0.1332,
-        pnl: -212.0,
-        pnlPercentage: -0.031832,
-        buyRange: 28.485,
-        sellRange: 34.815,
-        transactions: [
-          {
-            date: "2022-08-19",
-            price: 31.65,
-            quantity: 100,
-            pnl: 59.0,
-            pnlPercentage: 0.018641
-          },
-          {
-            date: "2022-07-27",
-            price: 34.95,
-            quantity: 100,
-            pnl: -271.0,
-            pnlPercentage: -0.077539
-          }
-        ]
-      },
-      // ... 其他标的 ...
-    ]
-  };
+    fetchData();
+    
+    // 每60秒刷新一次数据
+    const interval = setInterval(fetchData, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 计算所有投资组合的总成本
+  const totalAssets = portfolios
+    ? portfolios.reduce((sum, p) => sum + p.sum_position_cost, 0)
+    : 0;
+
+  // 计算所有投资组合的总盈亏
+  const totalPnl = portfolios
+    ? portfolios.reduce((sum, p) => sum + p.sum_profit_losses, 0)
+    : 0;
+
+  // 计算当前总价值（成本 + 盈亏）
+  const totalValue = totalAssets + totalPnl;
 
 
   return (
@@ -55,8 +58,43 @@ export default function HomePage() {
       <div className="w-64 bg-background border-r p-4">
         <div className="mb-6">
           <h2 className="text-lg font-bold">我的投资</h2>
-          <p className="text-sm text-gray-500">总资产: ¥{portfolio.totalValue.toLocaleString()}</p>
+          
+          {/* 加载状态 */}
+          {isLoading && (
+            <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+              <Spinner className="w-4 h-4" />
+              <span>加载中...</span>
+            </div>
+          )}
+          
+          {/* 错误状态 */}
+          {error && (
+            <p className="text-sm text-red-500 mt-2">
+              加载失败
+            </p>
+          )}
+          
+          {/* 总资产显示 */}
+          {!isLoading && !error && (
+            <div className="space-y-1 mt-2">
+              <p className="text-sm text-gray-500">
+                总成本: ¥{totalAssets.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className={`text-sm font-medium ${totalPnl >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                总盈亏: {totalPnl >= 0 ? '+' : ''}¥{totalPnl.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-gray-700 font-semibold">
+                当前价值: ¥{totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              {portfolios && portfolios.length > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {portfolios.length} 个投资组合
+                </p>
+              )}
+            </div>
+          )}
         </div>
+        
         <nav className="space-y-2">
           <Button
             variant={activeTab === 'positions' ? 'primary' : 'outline'}
