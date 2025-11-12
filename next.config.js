@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export', // 静态导出，Tauri 需要
   images: {
     unoptimized: true, // 静态导出需要
   },
