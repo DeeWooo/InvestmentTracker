@@ -28,7 +28,10 @@ export function Onboarding() {
   const currentStep = steps[step];
 
   const handleComplete = () => {
-    document.cookie = 'onboarded=true; path=/';
+    console.log('[Onboarding] Marking as complete');
+    // 使用 localStorage 替代 cookie，在 Tauri 桌面应用中更可靠
+    localStorage.setItem('onboarded', 'true');
+    console.log('[Onboarding] Navigating to home');
     router.push('/');
   };
 

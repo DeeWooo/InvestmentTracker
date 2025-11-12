@@ -24,7 +24,8 @@ pub fn migrate_v0_to_v1(conn: &Connection) -> SqliteResult<()> {
     )?;
 
     if table_exists == 0 {
-        println!("[迁移] 旧表不存在，跳过迁移");
+        println!("[迁移] 旧表不存在，这是全新数据库，跳过迁移");
+        // 注意：表的创建由 get_db_connection() 中的代码处理
         return Ok(());
     }
 

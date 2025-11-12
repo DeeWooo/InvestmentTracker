@@ -12,19 +12,21 @@ use rusqlite::{Connection};
 use std::path::PathBuf;
 
 /// 获取数据库路径
+/// 使用用户主目录下的固定位置，确保无论从哪里启动应用，数据库位置都一致
 fn get_db_path() -> PathBuf {
-    // 优先使用 Tauri 应用数据目录，如果不可用则使用相对路径
-    #[cfg(debug_assertions)]
-    {
-        // 开发环境下使用相对路径
-        PathBuf::from("positions.db")
+    // 使用用户主目录 + .investmenttracker 子目录
+    let home_dir = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    
+    let app_data_dir = PathBuf::from(home_dir).join(".investmenttracker");
+    
+    // 确保目录存在
+    if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
+        eprintln!("无法创建应用数据目录: {}", e);
     }
-    #[cfg(not(debug_assertions))]
-    {
-        // 生产环境下使用应用数据目录
-        // Tauri 2.x 中简化为使用相对路径，由 Tauri 自动管理
-        PathBuf::from("positions.db")
-    }
+    
+    app_data_dir.join("positions.db")
 }
 
 /// 获取数据库连接

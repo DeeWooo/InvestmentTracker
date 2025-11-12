@@ -10,24 +10,27 @@ use rusqlite::Connection;
 use std::path::PathBuf;
 
 /// 获取数据库路径
+/// 使用用户主目录下的固定位置，确保无论从哪里启动应用，数据库位置都一致
 fn get_db_path() -> PathBuf {
-    // 优先使用 Tauri 应用数据目录，如果不可用则使用相对路径
-    #[cfg(debug_assertions)]
-    {
-        // 开发环境下使用相对路径
-        PathBuf::from("positions.db")
+    // 使用用户主目录 + .investmenttracker 子目录
+    let home_dir = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    
+    let app_data_dir = PathBuf::from(home_dir).join(".investmenttracker");
+    
+    // 确保目录存在
+    if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
+        eprintln!("无法创建应用数据目录: {}", e);
     }
-    #[cfg(not(debug_assertions))]
-    {
-        // 生产环境下使用应用数据目录
-        // Tauri 2.x 中简化为使用相对路径，由 Tauri 自动管理
-        PathBuf::from("positions.db")
-    }
+    
+    app_data_dir.join("positions.db")
 }
 
 /// 获取数据库连接
 fn get_db_connection() -> Result<Connection> {
     let db_path = get_db_path();
+    println!("[DB] 数据库路径: {:?}", db_path);
 
     // 确保目录存在
     if let Some(parent) = db_path.parent() {
@@ -38,11 +41,40 @@ fn get_db_connection() -> Result<Connection> {
     // 连接到数据库
     let conn = Connection::open(&db_path)
         .map_err(|e| AppError::Database(format!("连接数据库失败: {}", e)))?;
+    println!("[DB] 数据库连接成功");
 
     // 执行数据库迁移（如果需要）
+    println!("[DB] 开始执行迁移...");
     crate::migration::migrate_v0_to_v1(&conn)
         .map_err(|e| AppError::Database(format!("数据库迁移失败: {}", e)))?;
+    println!("[DB] 迁移完成");
 
+    // 如果是全新数据库，创建表结构
+    println!("[DB] 创建表结构（如果不存在）...");
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS positions (
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
+            name TEXT NOT NULL,
+            buy_price REAL NOT NULL,
+            buy_date TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'POSITION',
+            portfolio TEXT
+        )",
+        [],
+    ).map_err(|e| AppError::Database(format!("创建表失败: {}", e)))?;
+    println!("[DB] 表创建成功");
+
+    // 创建索引
+    println!("[DB] 创建索引...");
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_code ON positions(code)", [])
+        .map_err(|e| AppError::Database(format!("创建索引失败: {}", e)))?;
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON positions(status)", [])
+        .map_err(|e| AppError::Database(format!("创建索引失败: {}", e)))?;
+    println!("[DB] 索引创建成功");
+
+    println!("[DB] 数据库初始化完成");
     Ok(conn)
 }
 
