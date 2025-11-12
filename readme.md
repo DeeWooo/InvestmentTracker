@@ -499,7 +499,7 @@ MIT 是目前最宽松、最流行的开源许可证之一。我们选择它是�
 
 ## 👨‍💻 作者
 
-**Deewooo** - 独立开发者
+**Deewooo** 
 
 - GitHub: [@Deewooo](https://github.com/Deewooo)
 - 项目链接: [InvestmentTracker](https://github.com/Deewooo/InvestmentTracker)
