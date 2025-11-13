@@ -155,3 +155,40 @@ export interface PortfolioProfitLoss {
   sum_profit_losses: number;             // 总盈亏
   sum_profit_losses_rate: number;        // 总盈亏比
 }
+
+// ============= 已平仓交易相关类型 =============
+
+// 单笔已平仓交易
+export interface ClosedTrade {
+  id: string;              // 交易ID
+  code: string;            // 股票代码
+  name: string;            // 股票名称
+  buy_date: string;        // 买入日期
+  buy_price: number;       // 买入价格
+  sell_date: string;       // 卖出日期
+  sell_price: number;      // 卖出价格
+  quantity: number;        // 数量
+  profit_loss: number;     // 盈亏金额
+  profit_loss_rate: number;// 盈亏率
+  portfolio: string;       // 所属投资组合
+  holding_days: number;    // 持有天数
+}
+
+// 已平仓交易总统计
+export interface ClosedTradesStatistics {
+  total_trades: number;           // 总交易笔数
+  profitable_trades: number;      // 盈利笔数
+  loss_trades: number;           // 亏损笔数
+  win_rate: number;              // 成功率（盈利笔数 / 总笔数）
+  total_profit_loss: number;      // 总盈亏金额
+  average_profit_loss_rate: number; // 平均盈亏率
+  max_profit: number;            // 最大盈利
+  max_loss: number;              // 最大亏损
+  average_holding_days: number;   // 平均持有天数
+}
+
+// 已平仓交易统计总览
+export interface ClosedTradesSummary {
+  trades: ClosedTrade[];           // 已平仓交易列表（按卖出时间倒序）
+  statistics: ClosedTradesStatistics; // 总统计
+}

@@ -95,6 +95,7 @@ fn main() {
             commands::position::get_portfolio_positions,
             commands::position::get_portfolio_profit_loss_view,
             commands::position::fetch_stock_name,
+            commands::position::get_closed_trades_summary,
 
             // 数据库管理命令
             commands::position::reset_database,

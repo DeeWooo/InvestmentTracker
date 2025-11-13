@@ -9,6 +9,23 @@ use crate::models::position::{Position, PositionQuery, PortfolioSummary};
 pub struct PositionRepository;
 
 impl PositionRepository {
+    /// 辅助方法：从数据库行映射到 Position 对象
+    fn map_row_to_position(row: &rusqlite::Row) -> rusqlite::Result<Position> {
+        Ok(Position {
+            id: row.get(0)?,
+            code: row.get(1)?,
+            name: row.get(2)?,
+            buy_price: row.get(3)?,
+            buy_date: row.get(4)?,
+            quantity: row.get(5)?,
+            status: row.get(6)?,
+            portfolio: row.get(7)?,
+            sell_price: row.get(8)?,
+            sell_date: row.get(9)?,
+            parent_id: row.get(10)?,
+        })
+    }
+
     /// 保存新的持仓记录
     pub fn create(conn: &Connection, position: &Position) -> Result<String> {
         // 验证数据
@@ -52,23 +69,15 @@ impl PositionRepository {
     /// 根据 ID 查找持仓记录
     pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<Position>> {
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, buy_price, buy_date, quantity, status, portfolio
+            "SELECT id, code, name, buy_price, buy_date, quantity, status, portfolio,
+                    sell_price, sell_date, parent_id
              FROM positions
              WHERE id = ?"
         )?;
 
         let position = stmt.query_row(
             [id],
-            |row| Ok(Position {
-                id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
-                buy_price: row.get(3)?,
-                buy_date: row.get(4)?,
-                quantity: row.get(5)?,
-                status: row.get(6)?,
-                portfolio: row.get(7)?,
-            }),
+            |row| Self::map_row_to_position(row),
         ).optional()?;
 
         Ok(position)
@@ -101,7 +110,8 @@ impl PositionRepository {
         let (where_clause, params) = query.build_where_clause();
 
         let sql = format!(
-            "SELECT id, code, name, buy_price, buy_date, quantity, status, portfolio
+            "SELECT id, code, name, buy_price, buy_date, quantity, status, portfolio,
+                    sell_price, sell_date, parent_id
              FROM positions
              {}
              ORDER BY buy_date DESC",
@@ -114,16 +124,7 @@ impl PositionRepository {
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
 
         let positions = stmt.query_map(param_refs.as_slice(), |row| {
-            Ok(Position {
-                id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
-                buy_price: row.get(3)?,
-                buy_date: row.get(4)?,
-                quantity: row.get(5)?,
-                status: row.get(6)?,
-                portfolio: row.get(7)?,
-            })
+            Self::map_row_to_position(row)
         })?
         .collect::<rusqlite::Result<Vec<Position>>>()?;
 
@@ -160,23 +161,15 @@ impl PositionRepository {
     /// 获取指定组合中的所有持仓记录（仅状态为 POSITION 的）
     pub fn get_portfolio_positions(conn: &Connection, portfolio: &str) -> Result<Vec<Position>> {
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, buy_price, buy_date, quantity, status, portfolio
+            "SELECT id, code, name, buy_price, buy_date, quantity, status, portfolio,
+                    sell_price, sell_date, parent_id
              FROM positions
              WHERE portfolio = ? AND status = 'POSITION'
              ORDER BY code, buy_date DESC"
         )?;
 
         let positions = stmt.query_map([portfolio], |row| {
-            Ok(Position {
-                id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
-                buy_price: row.get(3)?,
-                buy_date: row.get(4)?,
-                quantity: row.get(5)?,
-                status: row.get(6)?,
-                portfolio: row.get(7)?,
-            })
+            Self::map_row_to_position(row)
         })?
         .collect::<rusqlite::Result<Vec<Position>>>()?;
 

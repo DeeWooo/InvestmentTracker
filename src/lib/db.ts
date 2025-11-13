@@ -6,7 +6,8 @@ import {
   ReducePositionRequest,
   PortfolioSummary,
   PositionStats,
-  PortfolioProfitLoss
+  PortfolioProfitLoss,
+  ClosedTradesSummary
 } from "@/lib/types";
 
 export const db = {
@@ -248,6 +249,33 @@ export const db = {
       console.error("Get portfolio profit loss view error:", err);
       throw new Error(
         err instanceof Error ? err.message : "获取投资组合盈亏视图失败"
+      );
+    }
+  },
+
+  // 获取已平仓交易统计
+  async getClosedTradesSummary(): Promise<ClosedTradesSummary> {
+    try {
+      console.log("[DB API] 获取已平仓交易统计...");
+      const result = await invoke<ClosedTradesSummary>(
+        "get_closed_trades_summary",
+        {}
+      );
+
+      if (!result || typeof result !== "object") {
+        throw new Error("获取数据格式错误");
+      }
+
+      console.log(
+        "[DB API] 获取已平仓交易统计成功，共",
+        result.trades?.length || 0,
+        "笔交易"
+      );
+      return result;
+    } catch (err) {
+      console.error("[DB API] 获取已平仓交易统计失败:", err);
+      throw new Error(
+        err instanceof Error ? err.message : "获取已平仓交易统计失败"
       );
     }
   },

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import PositionList from './PositionList';
 import Portfolio from './Portfolio';
 import PortfolioProfitLossView from './PortfolioProfitLossView';
+import { ClosedTradesView } from './ClosedTradesView';
 import { Spinner } from '@/components/ui/spinner';
 import { db } from '@/lib/db';
 import { PortfolioProfitLoss } from '@/lib/types';
@@ -141,6 +142,13 @@ export default function HomePage() {
           >
             盈亏视图
           </Button>
+          <Button
+            variant={activeTab === 'closed' ? 'primary' : 'outline'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab('closed')}
+          >
+            已平仓
+          </Button>
         </nav>
       </div>
 
@@ -149,6 +157,7 @@ export default function HomePage() {
         {activeTab === 'positions' && <PositionList onDataChange={handleDataChange} />}
         {activeTab === 'portfolio' && <Portfolio />}
         {activeTab === 'profitloss' && <PortfolioProfitLossView />}
+        {activeTab === 'closed' && <ClosedTradesView onDataChange={handleDataChange} />}
       </div>
     </div>
   );

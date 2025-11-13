@@ -23,6 +23,15 @@ pub struct Position {
     pub status: String,
     /// 所属投资组合
     pub portfolio: String,
+    /// 卖出价格（平仓时）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sell_price: Option<f64>,
+    /// 卖出日期（平仓时，YYYY-MM-DD）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sell_date: Option<String>,
+    /// 父记录ID（减仓时关联原记录）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
 }
 
 impl Position {
@@ -44,6 +53,36 @@ impl Position {
             quantity,
             status: "POSITION".to_string(),
             portfolio,
+            sell_price: None,
+            sell_date: None,
+            parent_id: None,
+        }
+    }
+
+    /// 计算已实现盈亏（仅对已平仓记录有效）
+    pub fn realized_profit_loss(&self) -> Option<f64> {
+        if self.is_closed() {
+            self.sell_price.map(|sell_price| {
+                (sell_price - self.buy_price) * self.quantity as f64
+            })
+        } else {
+            None
+        }
+    }
+
+    /// 计算已实现盈亏率（仅对已平仓记录有效）
+    pub fn realized_profit_loss_rate(&self) -> Option<f64> {
+        if self.is_closed() {
+            let cost = self.buy_price * self.quantity as f64;
+            self.realized_profit_loss().map(|pnl| {
+                if cost != 0.0 {
+                    pnl / cost
+                } else {
+                    0.0
+                }
+            })
+        } else {
+            None
         }
     }
 
@@ -202,5 +241,110 @@ impl PositionQuery {
         };
 
         (where_clause, params)
+    }
+}
+
+/// 已平仓交易统计总览
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClosedTradesSummary {
+    /// 已平仓交易列表（按卖出时间倒序）
+    pub trades: Vec<ClosedTrade>,
+    /// 总统计
+    pub statistics: ClosedTradesStatistics,
+}
+
+/// 单笔已平仓交易
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ClosedTrade {
+    /// 交易ID
+    pub id: String,
+    /// 股票代码
+    pub code: String,
+    /// 股票名称
+    pub name: String,
+    /// 买入日期
+    pub buy_date: String,
+    /// 买入价格
+    pub buy_price: f64,
+    /// 卖出日期
+    pub sell_date: String,
+    /// 卖出价格
+    pub sell_price: f64,
+    /// 数量
+    pub quantity: i32,
+    /// 盈亏金额
+    pub profit_loss: f64,
+    /// 盈亏率
+    pub profit_loss_rate: f64,
+    /// 所属投资组合
+    pub portfolio: String,
+    /// 持有天数
+    pub holding_days: i32,
+}
+
+impl From<Position> for ClosedTrade {
+    fn from(pos: Position) -> Self {
+        let sell_price = pos.sell_price.unwrap_or(0.0);
+        let sell_date = pos.sell_date.unwrap_or_default();
+        let cost = pos.buy_price * pos.quantity as f64;
+        let profit_loss = (sell_price - pos.buy_price) * pos.quantity as f64;
+        let profit_loss_rate = if cost != 0.0 { profit_loss / cost } else { 0.0 };
+
+        // 计算持有天数
+        let holding_days = calculate_holding_days(&pos.buy_date, &sell_date);
+
+        Self {
+            id: pos.id,
+            code: pos.code,
+            name: pos.name,
+            buy_date: pos.buy_date,
+            buy_price: pos.buy_price,
+            sell_date,
+            sell_price,
+            quantity: pos.quantity,
+            profit_loss,
+            profit_loss_rate,
+            portfolio: pos.portfolio,
+            holding_days,
+        }
+    }
+}
+
+/// 已平仓交易总统计
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClosedTradesStatistics {
+    /// 总交易笔数
+    pub total_trades: usize,
+    /// 盈利笔数
+    pub profitable_trades: usize,
+    /// 亏损笔数
+    pub loss_trades: usize,
+    /// 成功率（盈利笔数 / 总笔数）
+    pub win_rate: f64,
+    /// 总盈亏金额
+    pub total_profit_loss: f64,
+    /// 平均盈亏率
+    pub average_profit_loss_rate: f64,
+    /// 最大盈利
+    pub max_profit: f64,
+    /// 最大亏损
+    pub max_loss: f64,
+    /// 平均持有天数
+    pub average_holding_days: f64,
+}
+
+/// 计算持有天数
+fn calculate_holding_days(buy_date: &str, sell_date: &str) -> i32 {
+    use chrono::NaiveDate;
+
+    let buy = NaiveDate::parse_from_str(buy_date, "%Y-%m-%d").ok();
+    let sell = NaiveDate::parse_from_str(sell_date, "%Y-%m-%d").ok();
+
+    match (buy, sell) {
+        (Some(b), Some(s)) => {
+            let duration = s.signed_duration_since(b);
+            duration.num_days() as i32
+        }
+        _ => 0,
     }
 }

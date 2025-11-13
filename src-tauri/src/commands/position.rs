@@ -3,8 +3,8 @@
 
 use crate::{not_found, invalid_input, error::{AppError, Result}};
 use crate::db::position_repo::PositionRepository;
-use crate::db::{QuoteService, PortfolioService};
-use crate::models::position::{Position, CreatePositionRequest, PortfolioSummary};
+use crate::db::{QuoteService, PortfolioService, ClosedTradeService};
+use crate::models::position::{Position, CreatePositionRequest, PortfolioSummary, ClosedTradesSummary};
 use crate::models::{PortfolioProfitLoss};
 use rusqlite::{Connection, params};
 use std::path::PathBuf;
@@ -448,4 +448,28 @@ pub async fn get_portfolio_profit_loss_view(use_mock: Option<bool>) -> Result<Ve
     }
 
     Ok(result)
+}
+
+/// 获取已平仓交易统计
+///
+/// 返回：
+/// - ClosedTradesSummary: 包含所有已平仓交易列表和总统计
+#[tauri::command]
+pub async fn get_closed_trades_summary() -> Result<ClosedTradesSummary> {
+    println!("⏳ [Command] 开始获取已平仓交易统计...");
+
+    // 连接到数据库
+    let conn = get_db_connection()?;
+
+    // 获取已平仓交易统计
+    let summary = ClosedTradeService::get_closed_trades_summary(&conn)?;
+
+    println!("✅ [Command] 已平仓交易统计获取成功");
+    println!("   - 总交易笔数: {}", summary.statistics.total_trades);
+    println!("   - 盈利笔数: {}", summary.statistics.profitable_trades);
+    println!("   - 亏损笔数: {}", summary.statistics.loss_trades);
+    println!("   - 成功率: {:.2}%", summary.statistics.win_rate * 100.0);
+    println!("   - 总盈亏: ¥{:.2}", summary.statistics.total_profit_loss);
+
+    Ok(summary)
 }
