@@ -157,7 +157,7 @@ export default function HomePage() {
         {activeTab === 'positions' && <PositionList onDataChange={handleDataChange} />}
         {activeTab === 'portfolio' && <Portfolio />}
         {activeTab === 'profitloss' && <PortfolioProfitLossView />}
-        {activeTab === 'closed' && <ClosedTradesView onDataChange={handleDataChange} />}
+        {activeTab === 'closed' && <ClosedTradesView />}
       </div>
     </div>
   );

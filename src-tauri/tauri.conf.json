@@ -8,7 +8,7 @@
   },
   "identifier": "com.deewooo.investmenttracker",
   "productName": "InvestmentTracker",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "bundle": {
     "active": true,
     "targets": ["app", "nsis"],

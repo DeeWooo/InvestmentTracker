@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClosedTradesSummary, ClosedTrade, ClosedTradesStatistics } from "@/lib/types";
+import { ClosedTradesSummary, ClosedTradesStatistics } from "@/lib/types";
 import { db } from "@/lib/db";
 import {
   Table,
@@ -14,11 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
-interface ClosedTradesViewProps {
-  onDataChange?: () => void;
-}
-
-export function ClosedTradesView({ onDataChange }: ClosedTradesViewProps) {
+export function ClosedTradesView() {
   const [summary, setSummary] = useState<ClosedTradesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
