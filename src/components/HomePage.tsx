@@ -20,8 +20,8 @@ export default function HomePage() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      // 使用模拟数据模式获取盈亏视图
-      const data = await db.getPortfolioProfitLossView(true);
+      // 使用实时价格数据（后端会自动处理降级逻辑）
+      const data = await db.getPortfolioProfitLossView(false);
       setPortfolios(data);
       console.log('📊 主页数据已刷新，持仓组合数:', data.length);
     } catch (err) {

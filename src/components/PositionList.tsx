@@ -99,7 +99,7 @@ export default function PositionList({ onDataChange }: PositionListProps) {
   useEffect(() => {
     const loadPnLData = async () => {
       try {
-        const data = await db.getPortfolioProfitLossView(true);
+        const data = await db.getPortfolioProfitLossView(false);
         const pnlMap = new Map<string, PositionProfitLoss>();
 
         // 遍历所有投资组合的所有股票的所有持仓记录

@@ -226,9 +226,10 @@ export const db = {
     }
   },
 
-  // 获取所有投资组合的完整盈亏视图（带实时价格）
+  // 获取所有投资组合的完整盈亏视图（优先使用实时价格）
   // 对应后端的 get_portfolio_profit_loss_view
-  async getPortfolioProfitLossView(useMock: boolean = true): Promise<PortfolioProfitLoss[]> {
+  // @param useMock - 是否使用模拟数据（仅用于开发测试，默认为 false 优先使用实时价格）
+  async getPortfolioProfitLossView(useMock: boolean = false): Promise<PortfolioProfitLoss[]> {
     if (typeof window === "undefined") {
       throw new Error("getPortfolioProfitLossView can only be called in the browser");
     }
