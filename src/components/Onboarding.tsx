@@ -39,6 +39,7 @@ export function Onboarding() {
     <div className="flex flex-col h-screen p-6">
       {/* 内容区域 */}
       <div className="flex-1 flex flex-col items-center justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src={currentStep.image} 
           alt={currentStep.title}

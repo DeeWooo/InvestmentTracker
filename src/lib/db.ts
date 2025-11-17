@@ -10,6 +10,14 @@ import {
   ClosedTradesSummary
 } from "@/lib/types";
 
+// Tauri 错误对象类型定义
+interface TauriError {
+  message?: string;
+  display?: string;
+  error?: string;
+  code?: string;
+}
+
 export const db = {
   // 保存新的持仓记录
   async savePosition(request: CreatePositionRequest): Promise<Position> {
@@ -59,7 +67,7 @@ export const db = {
         errorMessage = err;
       } else if (err && typeof err === "object") {
         // 尝试从错误对象中提取消息
-        const errObj = err as any;
+        const errObj = err as TauriError;
         // Tauri 2 错误对象可能包含 message 或 display 字段
         if (errObj.message) {
           errorMessage = errObj.message;
@@ -291,7 +299,7 @@ export const db = {
         errorMessage = err;
       } else if (err && typeof err === "object") {
         // 尝试从错误对象中提取消息
-        const errObj = err as any;
+        const errObj = err as TauriError;
         // Tauri 2 错误对象可能包含 message 或 display 字段
         if (errObj.message) {
           errorMessage = errObj.message;
