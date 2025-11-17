@@ -179,6 +179,21 @@ fn check_if_migrated(conn: &Connection) -> SqliteResult<bool> {
 pub fn migrate_v1_to_v2(conn: &Connection) -> SqliteResult<()> {
     println!("[迁移] 检查是否需要 v1 -> v2 迁移");
 
+    // 首先检查表是否存在
+    let table_exists: bool = match conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='positions'",
+        [],
+        |row| row.get::<_, i32>(0)
+    ) {
+        Ok(count) => count > 0,
+        Err(_) => false,
+    };
+
+    if !table_exists {
+        println!("[迁移] 表不存在，跳过 v1 -> v2 迁移（表将在初始化时创建）");
+        return Ok(());
+    }
+
     // 检查是否已经有 sell_price 字段
     let mut stmt = conn.prepare("PRAGMA table_info(positions)")?;
     let columns: Vec<String> = stmt
@@ -224,6 +239,21 @@ pub fn migrate_v1_to_v2(conn: &Connection) -> SqliteResult<()> {
 /// - 减仓卖出：parent_id = 原持仓的 id
 pub fn migrate_v2_to_v3(conn: &Connection) -> SqliteResult<()> {
     println!("[迁移] 检查是否需要 v2 -> v3 迁移");
+
+    // 首先检查表是否存在
+    let table_exists: bool = match conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='positions'",
+        [],
+        |row| row.get::<_, i32>(0)
+    ) {
+        Ok(count) => count > 0,
+        Err(_) => false,
+    };
+
+    if !table_exists {
+        println!("[迁移] 表不存在，跳过 v2 -> v3 迁移（表将在初始化时创建）");
+        return Ok(());
+    }
 
     // 检查是否已经有 parent_id 字段
     let mut stmt = conn.prepare("PRAGMA table_info(positions)")?;

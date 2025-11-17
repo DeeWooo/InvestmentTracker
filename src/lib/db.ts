@@ -49,8 +49,42 @@ export const db = {
       console.log("Retrieved positions:", positions);
       return positions;
     } catch (err) {
-      console.error("Database get error:", err);
-      throw new Error(err instanceof Error ? err.message : "获取持仓数据失败");
+      // 改进错误处理，更好地显示错误信息
+      // Tauri 2 会将错误序列化为包含 message, display, code 的对象
+      let errorMessage = "获取持仓数据失败";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "string") {
+        errorMessage = err;
+      } else if (err && typeof err === "object") {
+        // 尝试从错误对象中提取消息
+        const errObj = err as any;
+        // Tauri 2 错误对象可能包含 message 或 display 字段
+        if (errObj.message) {
+          errorMessage = errObj.message;
+        } else if (errObj.display) {
+          errorMessage = errObj.display;
+        } else if (errObj.error) {
+          errorMessage = errObj.error;
+        } else {
+          // 尝试序列化整个错误对象
+          try {
+            errorMessage = JSON.stringify(err, null, 2);
+          } catch {
+            errorMessage = String(err);
+          }
+        }
+      }
+      
+      console.error("Database get error:", {
+        error: err,
+        message: errorMessage,
+        type: typeof err,
+        stringified: JSON.stringify(err, null, 2)
+      });
+      
+      throw new Error(errorMessage);
     }
   },
 
@@ -247,10 +281,42 @@ export const db = {
       console.log("Retrieved portfolio profit loss view:", portfolios);
       return portfolios;
     } catch (err) {
-      console.error("Get portfolio profit loss view error:", err);
-      throw new Error(
-        err instanceof Error ? err.message : "获取投资组合盈亏视图失败"
-      );
+      // 改进错误处理，更好地显示错误信息
+      // Tauri 2 会将错误序列化为包含 message, display, code 的对象
+      let errorMessage = "获取投资组合盈亏视图失败";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "string") {
+        errorMessage = err;
+      } else if (err && typeof err === "object") {
+        // 尝试从错误对象中提取消息
+        const errObj = err as any;
+        // Tauri 2 错误对象可能包含 message 或 display 字段
+        if (errObj.message) {
+          errorMessage = errObj.message;
+        } else if (errObj.display) {
+          errorMessage = errObj.display;
+        } else if (errObj.error) {
+          errorMessage = errObj.error;
+        } else {
+          // 尝试序列化整个错误对象
+          try {
+            errorMessage = JSON.stringify(err, null, 2);
+          } catch {
+            errorMessage = String(err);
+          }
+        }
+      }
+      
+      console.error("Get portfolio profit loss view error:", {
+        error: err,
+        message: errorMessage,
+        type: typeof err,
+        stringified: JSON.stringify(err, null, 2)
+      });
+      
+      throw new Error(errorMessage);
     }
   },
 

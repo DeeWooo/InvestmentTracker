@@ -4,22 +4,21 @@
   "private": true,
   "description": "A desktop investment tracking tool built with Tauri, Next.js, and Rust",
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "npx tauri dev",
     "next:dev": "next dev -p 3001",
     "next:build": "next build",
-    "build": "npm run next:build && tauri build",
+    "build": "npm run next:build && npx tauri build",
     "start": "next start",
     "lint": "next lint",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri": "npx tauri",
+    "tauri:dev": "npx tauri dev",
+    "tauri:build": "npx tauri build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.5",
     "@radix-ui/react-label": "^2.1.1",
     "@shadcn/ui": "^0.0.4",
     "@vercel/postgres": "^0.10.0",
-    "better-sqlite3": "^11.8.1",
     "build": "^0.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

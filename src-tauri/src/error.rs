@@ -145,14 +145,27 @@ macro_rules! business_error {
 }
 
 /// 为 Tauri 实现错误序列化
+/// Tauri 2 会将实现了 Serialize 的错误序列化为 JSON 传递给前端
 impl Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         use serde::ser::SerializeMap;
-        let mut map = serializer.serialize_map(Some(2))?;
-        map.serialize_entry("message", &self.to_string())?;
+        let mut map = serializer.serialize_map(Some(3))?;
+        
+        // 提取原始错误消息（不带前缀）
+        let raw_message = match self {
+            AppError::Database(msg) => msg,
+            AppError::NotFound(msg) => msg,
+            AppError::InvalidInput(msg) => msg,
+            AppError::Business(msg) => msg,
+            AppError::Io(msg) => msg,
+            AppError::Serialization(msg) => msg,
+        };
+        
+        map.serialize_entry("message", raw_message)?;
+        map.serialize_entry("display", &self.to_string())?; // 带前缀的完整消息
         map.serialize_entry("code", match self {
             AppError::Database(_) => "DATABASE_ERROR",
             AppError::NotFound(_) => "NOT_FOUND",
